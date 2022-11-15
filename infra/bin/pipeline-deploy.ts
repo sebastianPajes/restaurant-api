@@ -39,7 +39,7 @@ appPipelines.forEach((acc) => {
     const {
         name, account, region, branch, stage, preApproval, tags
     } = acc;
-    new PipelineStack(app, `TemplatePipelineStack-${name}-${region || defaultRegion}`, {
+    new PipelineStack(app, `RestaurantApiStack-${name}-${region || defaultRegion}`, {
         description: `${name.toUpperCase()} Pipeline Stack`,
         env: {
             region: defaultRegion,

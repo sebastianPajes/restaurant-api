@@ -173,8 +173,8 @@ export class PipelineStack extends Stack {
       })
 
       // Complete the pipeline using CDK Pipelines
-      const pipeline = new CodePipeline(this, 'TemplatePipeline', {
-          pipelineName: `TemplatePipeline-${envName}-${deployEnv.region}`,
+      const pipeline = new CodePipeline(this, 'RestaurantApiStack', {
+          pipelineName: `RestaurantApiStack-${envName}-${deployEnv.region}`,
           crossAccountKeys: true,
           synth
       });
