@@ -1,0 +1,39 @@
+{
+  "name": "foo-service-infra",
+  "version": "0.1.0",
+  "bin": {
+    "foo-service": "bin/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+    "clean-cdk": "rm -rf cdk.out cdk.context.json",
+    "synth:sandbox": "yarn add-assets && yarn clean-cdk && STAGE=sandbox cdk synth",
+    "synth:staging": "yarn add-assets && yarn clean-cdk && STAGE=staging cdk synth",
+    "synth:prod": "yarn add-assets && yarn clean-cdk && STAGE=prod cdk synth",
+    "deploy:sandbox": "yarn add-assets && yarn clean-cdk && STAGE=sandbox cdk deploy",
+    "deploy:staging": "yarn add-assets && yarn clean-cdk && STAGE=staging cdk deploy",
+    "deploy:prod": "yarn add-assets && yarn clean-cdk && STAGE=prod cdk deploy",
+    "build-layer": "yarn --cwd lib/lambda-fns install && yarn --cwd lib/lambda-fns build;",
+    "copy-assets": "rm -rf assets; mkdir -p assets; cp -r lib/lambda-fns/layer.zip lib/lambda-fns/dist assets",
+    "add-assets": "yarn build-layer && yarn copy-assets"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.10",
+    "@types/node": "^17.0.32",
+    "aws-cdk": "2.47.0",
+    "jest": "^26.4.2",
+    "ts-jest": "^26.2.0",
+    "ts-node": "^9.0.0",
+    "typescript": "~3.9.7"
+  },
+  "dependencies": {
+    "@aws-cdk/aws-apigatewayv2-alpha": "^2.47.0-alpha.0",
+    "aws-cdk-lib": "2.47.0",
+    "constructs": "^10.0.0",
+    "dotenv": "^16.0.0",
+    "source-map-support": "^0.5.16"
+  }
+}

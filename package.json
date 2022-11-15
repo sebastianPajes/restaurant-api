@@ -1,0 +1,24 @@
+{
+  "name": "foo-service",
+  "version": "1.0.0",
+  "description": "Foo Service",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "clean-cdk": "cd infra && rm -rf cdk.out cdk.context.json; cd ..",
+    "deploy": "yarn add-assets && cd infra && cdk deploy;cd ..",
+    "deploy-local": "yarn add-assets && cd infra && STAGE=sandbox cdk deploy --profile $PROFILE",
+    "deploy-pipeline": "yarn add-assets && yarn clean-cdk && cd infra && cdk deploy --profile $PROFILE --all;cd..",
+    "deploy-only": "cd infra && cdk deploy --profile greenline-sandbox;cd ..",
+    "synth": "yarn add-assets && cd infra && cdk synth --validation;cd ..",
+    "synth-local": "yarn add-assets && cd infra && STAGE=sandbox cdk synth --profile greenline-sandbox;cd ..",
+    "build-layer": "yarn --cwd app install && yarn --cwd app build;",
+    "copy-assets": "rm -rf infra/assets; mkdir -p infra/assets; cp -r app/layer.zip app/dist infra/assets; rm -rf app/layer.zip app/dist",
+    "add-assets": "yarn build-layer && yarn copy-assets"
+  },
+  "keywords": [
+    "template"
+  ],
+  "author": "Emmanuel N Kyeyune",
+  "license": "ISC"
+}
