@@ -130,7 +130,7 @@ export class Config implements IConfig {
  
 // PIPELINE CONFIG
 export const options: Options = {
-    repoString: 'sebastian1710/restaurant-api', // GitHub owner/repository
+    repoString: 'sebastianPajes/restaurant-api', // GitHub owner/repository
     connectionArn: 'arn:aws:codestar-connections:us-east-1:275179852100:connection/bce69f03-7c8d-4d70-8f74-04b9218cd0cc', // CodeStar GitHub connection ARN
     version: '1', // Increment to trigger a pipeline deployment
     defaultRegion: 'us-east-1',
