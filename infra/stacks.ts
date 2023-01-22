@@ -12,7 +12,6 @@ import { SQSQueue } from './lib/constructs/sqs'
 import { GetSystemParameterString } from './lib/constructs/ssm'
 import { SharedFunctionLayer, LambdaFunction } from './lib/constructs/lambda'
 import { config } from './config'
-import { Options } from './lib/utils';
 import { ApplicationStage } from './lib/application-stage';
 import { CfnApp, CfnBranch } from 'aws-cdk-lib/aws-amplify';
 import { DynamoDbTable } from './lib/constructs/dynamodb';
@@ -40,7 +39,7 @@ export class RestaurantApiStack extends Stack {
 
     // amplify
     const { value: gitToken } = new GetSystemParameterString(this, {
-      prefix: `${STAGE}-restaurant-api`,
+      prefix: `${config.stage}-restaurant-api`,
       path: 'github-access-token',
     })
 
@@ -51,7 +50,7 @@ export class RestaurantApiStack extends Stack {
       environmentVariables: [
         { name: 'USER_POOL_ID', value: userPool.userPoolId },
         { name: 'USER_POOL_CLIENT', value: userPoolClient.userPoolClientId },
-        { name: 'REGION', value: AWS_DEFAULT_REGION }, 
+        { name: 'REGION', value: config.stack.env.region }, 
     ]
     });
 

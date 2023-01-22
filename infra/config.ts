@@ -28,8 +28,31 @@ export const config = {
       },
     },
     deployedBy: validatedEnvs.DEPLOYED_BY,
+    aws:{
+      ssm: {
+        parameterPaths: {
+          ecomEnvs: `/ecomm/envs`,
+          gatewayEnvs: `/${stage}/gateway/authz/restApi/envs`,
+        },
+      },
+      lambda: {
+        searchPath: 'products',
+      },
+      dynamoDB: {
+        globalIndexes: {
+          employeeIndex: {
+            indexName: 'employee-index',
+            partitionKeyName: 'employeeUsername',
+          },
+          discountIndex: {
+            indexName: 'processOnDateUTC-index',
+            partitionKeyName: 'pk',
+            sortKey: 'processOnDateUTC',
+          }
+        }
+      }
   }
-
+}
  
 // PIPELINE CONFIG
 export const options: Options = {
