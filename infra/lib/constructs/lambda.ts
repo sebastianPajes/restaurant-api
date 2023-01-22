@@ -16,7 +16,8 @@ interface LambdaFunctionConstructProps {
   memoryMB: number
   reservedConcurrentExecutions?: number
   sourceCodePath: string
-  environment?: Record<string, string>
+  environment?: Record<string, string>,
+  role?: iam.PolicyStatement,
   eventSources?: { 
     queues?: sqs.IQueue[],
     props?: lambdaEventSources.SqsEventSourceProps
@@ -62,6 +63,7 @@ export class LambdaFunction {
       //   resources: ['some-resource-arn']
       // }))
 
+    
       this.lambdaFn = new lambda.Function(scope, `${props.prefix}-${props.functionName}-fn`, {
         functionName: `${props.prefix}-${props.functionName}`,
         code: lambda.Code.fromAsset(props.sourceCodePath),
@@ -75,6 +77,10 @@ export class LambdaFunction {
         role,
         environment: props.environment
       })
+
+      if (props.role) {
+        this.lambdaFn.role?.addToPrincipalPolicy(props.role)
+      }
 
       if(props.eventSources?.queues) {
         for(const queue of props.eventSources.queues) {

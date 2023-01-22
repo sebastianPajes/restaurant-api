@@ -1,84 +1,135 @@
 import { 
   Stack, 
   StackProps,
-  CfnOutput,
   aws_dynamodb as dynamodb,
   aws_apigateway as apigw,
+  aws_cognito,
+  RemovalPolicy,
+  aws_iam,
 } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import { SQSQueue } from './lib/constructs/sqs'
+import { GetSystemParameterString } from './lib/constructs/ssm'
 import { SharedFunctionLayer, LambdaFunction } from './lib/constructs/lambda'
 import { config } from './config'
-// import { DynamoDbTable } from './lib/constructs/dynamodb'
-export class FooStack extends Stack {
+import { Options } from './lib/utils';
+import { ApplicationStage } from './lib/application-stage';
+import { CfnApp, CfnBranch } from 'aws-cdk-lib/aws-amplify';
+import { DynamoDbTable } from './lib/constructs/dynamodb';
+
+export class RestaurantApiStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props)
 
 
-    const { queue: fooQueue } = new SQSQueue(this, {
-      queueName: `${config.projectName}-queue`,
+    // cognito
+    const userPool = new aws_cognito.UserPool(this, "RestaurantUserPool", {
+      removalPolicy: RemovalPolicy.DESTROY,
+      signInAliases: {
+        username: false,
+        email: true
+      },
+      customAttributes: {
+        'isAdmin': new aws_cognito.BooleanAttribute({ mutable: false })
+      } 
     })
 
-    // How to create a dynamodb table
+    const userPoolClient = userPool.addClient('RestaurantUserPoolClient', {
+      userPoolClientName: "RestaurantUserPoolClient",
+    })
 
-    // const { table: fooTable } = new DynamoDbTable(this, {
-    //   prefix: `${config.projectName}`,
-    //   tableName: `${config.projectName}-foo-table`,
-    //   partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
-    //   sortKey: { name: 'connectionId', type: dynamodb.AttributeType.STRING },
-    //   billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-    //   stream: dynamodb.StreamViewType.KEYS_ONLY,
-    //   globalSecondaryIndexes: [{
-    //     indexName: config.aws.dynamoDB.globalIndexes.connectionIdKeyOnlyIndex.indexName,
-    //     projectionType: dynamodb.ProjectionType.KEYS_ONLY,
-    //     partitionKey: { 
-    //       name: config.aws.dynamoDB.globalIndexes.connectionIdKeyOnlyIndex.partitionKeyName, 
-    //       type: dynamodb.AttributeType.STRING
-    //     }
-    //   }]
-    // })
+    // amplify
+    const { value: gitToken } = new GetSystemParameterString(this, {
+      prefix: `${STAGE}-restaurant-api`,
+      path: 'github-access-token',
+    })
 
+    const amplifyRestauranApp = new CfnApp(this, 'restaurant-app', {
+      name: 'restaurantApp',
+      repository: 'https://github.com/sebastianPajes/restaurant-app',
+      oauthToken: gitToken,
+      environmentVariables: [
+        { name: 'USER_POOL_ID', value: userPool.userPoolId },
+        { name: 'USER_POOL_CLIENT', value: userPoolClient.userPoolClientId },
+        { name: 'REGION', value: AWS_DEFAULT_REGION }, 
+    ]
+    });
 
+    new CfnBranch(this, 'MainBranch', {
+      appId: amplifyRestauranApp.attrAppId,
+      branchName: 'main' 
+    });
+
+    // dynamoDB
+
+    const { table: employees } = new DynamoDbTable(this, {
+      prefix: `${config.projectName}`,
+      tableName: `${config.projectName}-employees`,
+      partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      // stream: dynamodb.StreamViewType.KEYS_ONLY,
+      globalSecondaryIndexes: [{
+        indexName: config.aws.dynamoDB.globalIndexes.employeeIndex.indexName,
+        // projectionType: dynamodb.ProjectionType.KEYS_ONLY,
+        partitionKey: { 
+          name: config.aws.dynamoDB.globalIndexes.employeeIndex.partitionKeyName, 
+          type: dynamodb.AttributeType.STRING
+        }
+      }],
+      removePolicy: true
+    })
+
+    // lambdas
     const { layer } = new SharedFunctionLayer(this, {
       prefix: `${config.projectName}`,
       assetPath: 'assets/layer.zip'
     })
 
-    const { lambdaFnAlias: fooFunction } = new LambdaFunction(this, {
+    const { lambdaFnAlias: createRestaurant } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'foo-handler',
-      handler: 'handlers/foo-operation.handler',
+      functionName: 'create-restaurant-handler',
+      handler: 'handlers/create-restaurant.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
       sourceCodePath: 'assets/dist',
       environment: {
-        SQS_QUEUE_URL: fooQueue.queueUrl,
-      }
+        USER_POOL_ID: userPool.userPoolId,
+        TABLE_NAME: employees.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [userPool.userPoolArn, employees.tableArn],
+        actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem'],
+      })
     })
 
-    // const { lambdaFn: wooFunction } = new LambdaFunction(this, {
-    //   prefix: config.projectName,
-    //   layer,
-    //   functionName: 'woo-handler',
-    //   handler: 'handlers/woo-operation.handler',
-    //   timeoutSecs: 30,
-    //   memoryMB: 256,
-    //   // reservedConcurrentExecutions: 10,
-    //   sourceCodePath: 'assets/dist',
-    //   environment: {
-    //     SOME_ENV_FOR_YOUR_FUNCTION: 'some-value',
-    //   },
-    //   eventSources: {
-    //     queues: [fooQueue],
-    //     props: { batchSize: 10 }
-    //   }
-    // })
+    // apis
+    const restaurantApi = new apigw.RestApi(this, 'api-restaurant');
+    const internalBaseResource = restaurantApi.root.addResource('internal')
+    const createRestaurantResource = internalBaseResource.addResource('create');
 
-    const gateway = new apigw.LambdaRestApi(this, 'Endpoint', {
-      handler: fooFunction
-    })
+    const internalUsagePlan = new apigw.UsagePlan(this, 'internalUsagePlan', {
+      name: 'internal',
+      description: 'plan for internal use',
+      apiStages: [{
+        api: restaurantApi,
+        stage: restaurantApi.deploymentStage
+      }],
+    });
+    
+    const internalKey = new apigw.ApiKey(this, 'internalKey', {
+      apiKeyName: 'internalKey',
+    });
+
+    internalUsagePlan.addApiKey(internalKey);
+
+    createRestaurantResource.addMethod('POST', new apigw.LambdaIntegration(createRestaurant), {
+      apiKeyRequired: true
+    });
+
+    
 
   }
 }
