@@ -1,6 +1,6 @@
 {
-  "app": "npx ts-node --prefer-ts-exts bin/pipeline-deploy.ts",
-  "profile": "sebastian171000",
+  "app": "npx ts-node --prefer-ts-exts bin/index.ts",
+  "profile": "restaurant",
   "watch": {
     "include": [
       "**"
