@@ -5,7 +5,7 @@ import {
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
-import { FooStack, TemplateStackProps } from '../stacks';
+import { RestaurantApiStack, TemplateStackProps } from '../stacks';
 
 export class ApplicationStage extends Stage {
     /**
@@ -21,9 +21,9 @@ export class ApplicationStage extends Stage {
 
         
         const { env, tags, AWS_DEFAULT_REGION, CDK_DEFAULT_ACCOUNT, DEPLOYED_BY, STAGE } = props;
-        new FooStack(this, 'Foo-Api', {
-            stackName: 'Foo-Api',
-            description: 'Resources for Foo Service',
+        new RestaurantApiStack(this, 'Restaurant-Api', {
+            stackName: 'Restaurant-Api',
+            description: 'Resources for Restaurant Api Services',
             env,
             AWS_DEFAULT_REGION,
             CDK_DEFAULT_ACCOUNT,

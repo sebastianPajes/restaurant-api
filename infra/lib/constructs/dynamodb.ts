@@ -3,7 +3,7 @@ import {
   RemovalPolicy, 
   aws_dynamodb as dynamodb
 } from 'aws-cdk-lib'
-import { stageValue } from '../utils'
+// import { stageValue } from '../utils'
 
 interface DynamoDbTableConstructProps {
   prefix: string
@@ -12,7 +12,8 @@ interface DynamoDbTableConstructProps {
   sortKey?: dynamodb.Attribute
   billingMode: dynamodb.BillingMode
   stream?: dynamodb.StreamViewType
-  globalSecondaryIndexes?: dynamodb.GlobalSecondaryIndexProps[]
+  globalSecondaryIndexes?: dynamodb.GlobalSecondaryIndexProps[],
+  removePolicy?: boolean
 }
 
 export class DynamoDbTable {
@@ -29,9 +30,13 @@ export class DynamoDbTable {
         stream: props.stream,
         billingMode: props.billingMode,
         timeToLiveAttribute: 'ttl',
-        removalPolicy: stageValue.other({ production: RemovalPolicy.RETAIN }, RemovalPolicy.DESTROY)
+        // removalPolicy: stageValue.other({ production: RemovalPolicy.RETAIN }, RemovalPolicy.DESTROY)
       }
     )
+
+    if (props.removePolicy) {
+      this.table.applyRemovalPolicy(RemovalPolicy.DESTROY)
+    }
     for (const gsi of props.globalSecondaryIndexes || []) {
       this.table.addGlobalSecondaryIndex(gsi)
     }

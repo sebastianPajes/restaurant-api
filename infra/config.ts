@@ -41,7 +41,7 @@ export interface IConfig {
     }
     dynamoDB: {
       globalIndexes: {
-        retailerSlugIndex: {
+        employeeIndex: {
           indexName: string
           partitionKeyName: string
         },
@@ -74,7 +74,7 @@ export class Config implements IConfig {
     }; 
     dynamoDB: { 
       globalIndexes: {
-        retailerSlugIndex: { 
+        employeeIndex: { 
           indexName: string
           partitionKeyName: string 
         },
@@ -90,7 +90,7 @@ export class Config implements IConfig {
     const validatedEnvs = validateEnv(requiredEnvs, env)
     const stage = env.STAGE
 
-    this.projectName = `${stage}-template-cdk`
+    this.projectName = `${stage}-tp1-project`
     // this.commitSHA = validatedEnvs.COMMIT_SHA
     this.stage
     this.stack = {
@@ -113,9 +113,9 @@ export class Config implements IConfig {
       },
       dynamoDB: {
         globalIndexes: {
-          retailerSlugIndex: {
-            indexName: 'retailerSlug-index',
-            partitionKeyName: 'retailerSlug',
+          employeeIndex: {
+            indexName: 'employee-index',
+            partitionKeyName: 'employeeUsername',
           },
           discountIndex: {
             indexName: 'processOnDateUTC-index',

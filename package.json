@@ -1,7 +1,7 @@
 {
-  "name": "foo-service",
+  "name": "restaurant-api",
   "version": "1.0.0",
-  "description": "Foo Service",
+  "description": "Restaurant api",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -10,6 +10,7 @@
     "deploy-local": "yarn add-assets && cd infra && STAGE=sandbox cdk deploy --profile $PROFILE",
     "deploy-pipeline": "yarn add-assets && yarn clean-cdk && cd infra && cdk deploy --profile $PROFILE --all;cd..",
     "deploy-only": "cd infra && cdk deploy --profile greenline-sandbox;cd ..",
+    "deploy:custom": "yarn add-assets && yarn clean-cdk && cd infra && cdk deploy $STACK",
     "synth": "yarn add-assets && cd infra && cdk synth --validation;cd ..",
     "synth-local": "yarn add-assets && cd infra && STAGE=sandbox cdk synth --profile greenline-sandbox;cd ..",
     "build-layer": "yarn --cwd app install && yarn --cwd app build;",
@@ -19,6 +20,6 @@
   "keywords": [
     "template"
   ],
-  "author": "Emmanuel N Kyeyune",
+  "author": "Sebastian Pajes",
   "license": "ISC"
 }
