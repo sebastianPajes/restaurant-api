@@ -12,7 +12,7 @@ import { IEmployee } from '../models/Employee';
  const cognito = new CognitoIdentityServiceProvider();
 
 export const handler = async (event: APIGatewayEvent) => {
-  // function code goes here
+  
   console.log("request:", JSON.stringify(event, undefined, 2));
   const eventBody: ICreateRestaurantParams = (event.body ? JSON.parse(event.body) : {});
   const { USER_POOL_ID, TABLE_NAME } = process.env
@@ -48,10 +48,6 @@ export const handler = async (event: APIGatewayEvent) => {
   }
   
   const testResponse = {
-    message: "Hello Wolrd",
-    name: "Sebastian",
-    time: 60,
-    request: eventBody,
     userPoolId: USER_POOL_ID,
     tableName: TABLE_NAME,
     newUserRes,

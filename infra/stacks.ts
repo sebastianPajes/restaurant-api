@@ -8,11 +8,9 @@ import {
   aws_iam,
 } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
-import { SQSQueue } from './lib/constructs/sqs'
 import { GetSystemParameterString } from './lib/constructs/ssm'
 import { SharedFunctionLayer, LambdaFunction } from './lib/constructs/lambda'
 import { config } from './config'
-import { ApplicationStage } from './lib/application-stage';
 import { CfnApp, CfnBranch } from 'aws-cdk-lib/aws-amplify';
 import { DynamoDbTable } from './lib/constructs/dynamodb';
 
@@ -132,5 +130,6 @@ export class RestaurantApiStack extends Stack {
 
   }
 }
+
 
 

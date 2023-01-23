@@ -4,7 +4,7 @@ import { REQUIRED_ENV_VARIABLES } from './lib/types'
 import { validateEnv, getDeploymentStage, Options } from './lib/utils'
 
 dotenv.config({ 
-    path: path.resolve(__dirname, `./.env.sandbox`) 
+    path: path.resolve(__dirname, `./.env.${getDeploymentStage(process.env.STAGE)}`) 
   })
 
   export const requiredEnvs: Array<keyof REQUIRED_ENV_VARIABLES> = [
