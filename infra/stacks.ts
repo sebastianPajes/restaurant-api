@@ -102,17 +102,38 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
+    const { lambdaFnAlias: createEmployee } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'create-employee-handler',
+      handler: 'handlers/create-employee.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        USER_POOL_ID: userPool.userPoolId,
+        TABLE_NAME: employees.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [userPool.userPoolArn, employees.tableArn],
+        actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem'],
+      })
+    })
+
     // apis
-    const restaurantApi = new apigw.RestApi(this, 'api-restaurant');
-    const internalBaseResource = restaurantApi.root.addResource('internal')
+
+    //internal
+    const restaurantInternalApi = new apigw.RestApi(this, 'api-restaurant-internal');
+    const internalBaseResource = restaurantInternalApi.root.addResource('internal')
     const createRestaurantResource = internalBaseResource.addResource('create');
 
     const internalUsagePlan = new apigw.UsagePlan(this, 'internalUsagePlan', {
       name: 'internal',
       description: 'plan for internal use',
       apiStages: [{
-        api: restaurantApi,
-        stage: restaurantApi.deploymentStage
+        api: restaurantInternalApi,
+        stage: restaurantInternalApi.deploymentStage
       }],
     });
     
@@ -124,6 +145,18 @@ export class RestaurantApiStack extends Stack {
 
     createRestaurantResource.addMethod('POST', new apigw.LambdaIntegration(createRestaurant), {
       apiKeyRequired: true
+    });
+
+
+    //app
+    const restaurantAppApi = new apigw.RestApi(this, 'api-restaurant-app');
+    const employeeResource = restaurantAppApi.root.addResource('employees');
+    const appAuthorizer = new apigw.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
+      cognitoUserPools: [userPool]
+  });
+    employeeResource.addMethod('POST', new apigw.LambdaIntegration(createEmployee), {
+        authorizer: appAuthorizer,
+        authorizationType: apigw.AuthorizationType.COGNITO
     });
 
     
