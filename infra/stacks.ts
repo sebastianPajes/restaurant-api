@@ -122,40 +122,41 @@ export class RestaurantApiStack extends Stack {
     })
 
     // apis
+    const restaurantApi = new apigw.RestApi(this, 'api-restaurant');
+    
+    const baseResource = restaurantApi.root.addResource('api');
 
-    //internal
-    const restaurantInternalApi = new apigw.RestApi(this, 'api-restaurant-internal');
-    const internalBaseResource = restaurantInternalApi.root.addResource('internal')
-    const createRestaurantResource = internalBaseResource.addResource('create');
-
-    const internalUsagePlan = new apigw.UsagePlan(this, 'internalUsagePlan', {
+    //internalApis
+    const baseInternalResource = baseResource.addResource('internal');
+    const createResource = baseInternalResource.addResource('create');
+    
+    const usagePlan = new apigw.UsagePlan(this, 'usagePlan', {
       name: 'internal',
       description: 'plan for internal use',
       apiStages: [{
-        api: restaurantInternalApi,
-        stage: restaurantInternalApi.deploymentStage
+        api: restaurantApi,
+        stage: restaurantApi.deploymentStage,
       }],
     });
     
-    const internalKey = new apigw.ApiKey(this, 'internalKey', {
+    const apiKey = new apigw.ApiKey(this, 'internalKey', {
       apiKeyName: 'internalKey',
     });
-
-    internalUsagePlan.addApiKey(internalKey);
-
-    createRestaurantResource.addMethod('POST', new apigw.LambdaIntegration(createRestaurant), {
+    
+    usagePlan.addApiKey(apiKey);
+    
+    createResource.addMethod('POST', new apigw.LambdaIntegration(createRestaurant), {
       apiKeyRequired: true
     });
-
-
-    //app
-    const restaurantAppApi = new apigw.RestApi(this, 'api-restaurant-app');
-    const employeeResource = restaurantAppApi.root.addResource('employees');
-    const appAuthorizer = new apigw.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
-      cognitoUserPools: [userPool]
-  });
-    employeeResource.addMethod('POST', new apigw.LambdaIntegration(createEmployee), {
-        authorizer: appAuthorizer,
+    
+    //appApis
+    const employeesResource = baseResource.addResource('employees');
+    const authorizer = new apigw.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
+        cognitoUserPools: [userPool]
+    });
+    
+    employeesResource.addMethod('POST', new apigw.LambdaIntegration(createEmployee), {
+        authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
     });
 

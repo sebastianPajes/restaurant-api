@@ -6,15 +6,11 @@ import { IEmployee } from '../Employee'
 export const EmployeeDefinition: SchemaDefinition = {
     pk: {
       type: String,
-      hashKey: true
+      hashKey: true,
     },
     sk: {
       type: String,
       rangeKey: true
-    },
-    companyId: {
-      type: String,
-      required: true
     },
     restaurantId: {
       type: String,

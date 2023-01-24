@@ -1,5 +1,4 @@
 export interface IEmployee {
-    companyId: string
     restaurantId: string
     firstName: string
     lastName: string
@@ -10,7 +9,6 @@ export interface IEmployee {
 }
 
 export class Employee implements IEmployee {
-    companyId: string
     restaurantId: string
     firstName: string
     lastName: string

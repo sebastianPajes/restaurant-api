@@ -1,3 +1,6 @@
+import { Uuid } from "aws-sdk/clients/groundstation";
+import { lutimesSync } from "fs";
+import { v4 as uuidv4 } from "uuid";
 
 const generateKey = (key: string, value: string | number | boolean) =>
   `${key}#${value}`.toLowerCase().replace(/\s/g, '')
@@ -25,6 +28,16 @@ export const getEmployeePrimaryKeys = (
       sk: 'restaurantId',
     }
   }
+}
+
+
+
+export const getEmployeePrimaryKeysV2 = (
+  restaurantId?: string,
+): { pk: Uuid; sk?: string } => {
+  const pk = uuidv4();
+  return restaurantId ? { pk, ...getSortKey(restaurantId) } 
+                        : { pk, sk: 'restaurantId' };
 }
 
 export const getCartKeys = (

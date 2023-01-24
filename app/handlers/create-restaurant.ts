@@ -9,7 +9,7 @@ import { IEmployee } from '../models/Employee';
  * see infra/stacks.ts for to see where this function is created
  */
 
- const cognito = new CognitoIdentityServiceProvider();
+const cognito = new CognitoIdentityServiceProvider();
 
 export const handler = async (event: APIGatewayEvent) => {
   
@@ -33,7 +33,6 @@ export const handler = async (event: APIGatewayEvent) => {
       ]
     }).promise();
     const employee: IEmployee = {
-      companyId: 'abc',
       restaurantId: '123',
       firstName: eventBody.firstName,
       lastName: eventBody.lastName,
@@ -42,7 +41,7 @@ export const handler = async (event: APIGatewayEvent) => {
       cognitoUsername: newUserRes.User.Username
     };
 
-    employeeRes = await CreateEmployeeService.create(employee.companyId, employee.restaurantId, employee);
+    employeeRes = await CreateEmployeeService.create(employee.restaurantId, employee);
   } catch (error) {
     return errorResponse(error.statusCode, error.message)
   }
