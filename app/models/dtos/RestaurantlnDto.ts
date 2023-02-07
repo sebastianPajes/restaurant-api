@@ -4,7 +4,7 @@ export interface ICreateRestaurantEvent {
     }
 }
 
-export interface ICreateRestaurantParams {
+export interface ICreateRestaurantInDto {
     email: string,
     password: string,
     phone: string,

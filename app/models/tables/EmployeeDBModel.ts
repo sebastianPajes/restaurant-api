@@ -1,7 +1,12 @@
 import dynamoose from '../dynamoose'
 import { Document } from 'dynamoose/dist/Document'
 import { SchemaDefinition } from 'dynamoose/dist/Schema'
-import { IEmployee } from '../Employee'
+import { IEmployee} from '../Employee'
+
+export interface IEmployeeSchema extends IEmployee, Document {
+  pk: string;
+  sk: string;
+}
 
 export const EmployeeDefinition: SchemaDefinition = {
     pk: {
@@ -12,7 +17,7 @@ export const EmployeeDefinition: SchemaDefinition = {
       type: String,
       rangeKey: true
     },
-    restaurantId: {
+    locationId: {
       type: String,
       required: true
     },
@@ -37,19 +42,19 @@ export const EmployeeDefinition: SchemaDefinition = {
     cognitoUsername: {
         type: String,
         required: true
+    },
+    isAdmin:{
+      type: Boolean,
+      required: true
     }
   }
   
 
-export interface IEmployeeSchema extends IEmployee, Document {
-    pk: string
-    sk: string
-}
 
 const EmployeeSchema = new dynamoose.Schema(EmployeeDefinition)
 
 export const EmployeeDBModel = dynamoose.model<IEmployeeSchema>(
-  `${process.env.TABLE_NAME}`,
+  `${process.env.EMPLOYEE_TABLE_NAME}`,
   EmployeeSchema,
   {
     create: false,

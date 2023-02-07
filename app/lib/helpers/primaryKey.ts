@@ -40,6 +40,12 @@ export const getEmployeePrimaryKeysV2 = (
                         : { pk, sk: 'restaurantId' };
 }
 
+export const getLocationPrimaryKeysV2 = (
+): { pk: Uuid } => {
+  const pk = uuidv4();
+  return { pk }; 
+}
+
 export const getCartKeys = (
   companyId: string,
   restaurantId: string,

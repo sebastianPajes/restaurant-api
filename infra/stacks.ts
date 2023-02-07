@@ -57,8 +57,7 @@ export class RestaurantApiStack extends Stack {
       branchName: 'main' 
     });
 
-    // dynamoDB
-
+    // dynamoDB tables
     const { table: employees } = new DynamoDbTable(this, {
       prefix: `${config.projectName}`,
       tableName: `${config.projectName}-employees`,
@@ -71,6 +70,22 @@ export class RestaurantApiStack extends Stack {
         // projectionType: dynamodb.ProjectionType.KEYS_ONLY,
         partitionKey: { 
           name: config.aws.dynamoDB.globalIndexes.employeeIndex.partitionKeyName, 
+          type: dynamodb.AttributeType.STRING
+        }
+      }],
+      removePolicy: true
+    })
+    const { table: locations } = new DynamoDbTable(this, {
+      prefix: `${config.projectName}`,
+      tableName: `${config.projectName}-locations`,
+      partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      // stream: dynamodb.StreamViewType.KEYS_ONLY,
+      globalSecondaryIndexes: [{
+        indexName: config.aws.dynamoDB.globalIndexes.locationIndex.indexName,
+        // projectionType: dynamodb.ProjectionType.KEYS_ONLY,
+        partitionKey: { 
+          name: config.aws.dynamoDB.globalIndexes.locationIndex.partitionKeyName, 
           type: dynamodb.AttributeType.STRING
         }
       }],
@@ -94,10 +109,11 @@ export class RestaurantApiStack extends Stack {
       sourceCodePath: 'assets/dist',
       environment: {
         USER_POOL_ID: userPool.userPoolId,
-        TABLE_NAME: employees.tableName
+        EMPLOYEE_TABLE_NAME: employees.tableName,
+        LOCATION_TABLE_NAME: locations.tableName,
       },
       role: new aws_iam.PolicyStatement({
-        resources: [userPool.userPoolArn, employees.tableArn],
+        resources: [userPool.userPoolArn, employees.tableArn,locations.tableArn],
         actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem'],
       })
     })
@@ -107,6 +123,24 @@ export class RestaurantApiStack extends Stack {
       layer,
       functionName: 'create-employee-handler',
       handler: 'handlers/create-employee.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        USER_POOL_ID: userPool.userPoolId,
+        EMPLOYEE_TABLE_NAME: employees.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [userPool.userPoolArn, employees.tableArn],
+        actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem'],
+      })
+    })
+    const { lambdaFnAlias: createCategory } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'create-category-handler',
+      handler: 'handlers/create-category.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,

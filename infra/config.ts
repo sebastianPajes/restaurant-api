@@ -44,6 +44,10 @@ export const config = {
             indexName: 'employee-index',
             partitionKeyName: 'employeeUsername',
           },
+          locationIndex: {
+            indexName: 'location-index',
+            partitionKeyName: 'locationName',
+          },
           discountIndex: {
             indexName: 'processOnDateUTC-index',
             partitionKeyName: 'pk',

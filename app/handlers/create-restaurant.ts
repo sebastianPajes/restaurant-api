@@ -1,9 +1,11 @@
 import { APIGatewayEvent } from 'aws-lambda'
 import { errorResponse, successResponse } from '../lib/responses';
 import { CognitoIdentityServiceProvider } from 'aws-sdk';
-import { ICreateRestaurantParams } from '../models/Internal';
+import { ICreateRestaurantInDto } from '../models/dtos/RestaurantlnDto';
 import { CreateEmployeeService } from '../services/Employee/CreateEmployeeService';
-import { IEmployee } from '../models/Employee';
+import { IEmployee} from '../models/Employee';
+import { ILocation} from '../models/Location';
+import { CreateLocationService } from '../services/Location/CreateLocationService';
 /**
  * Your lambda handler
  * see infra/stacks.ts for to see where this function is created
@@ -14,10 +16,11 @@ const cognito = new CognitoIdentityServiceProvider();
 export const handler = async (event: APIGatewayEvent) => {
   
   console.log("request:", JSON.stringify(event, undefined, 2));
-  const eventBody: ICreateRestaurantParams = (event.body ? JSON.parse(event.body) : {});
-  const { USER_POOL_ID, TABLE_NAME } = process.env
+  const eventBody: ICreateRestaurantInDto = (event.body ? JSON.parse(event.body) : {});
+  const { USER_POOL_ID} = process.env
   let newUserRes;
   let employeeRes;
+  let locationRes;
   try {
     newUserRes = await cognito.adminCreateUser({
       UserPoolId: USER_POOL_ID,
@@ -32,25 +35,34 @@ export const handler = async (event: APIGatewayEvent) => {
         { Name: 'phone_number_verified', Value: 'true'}
       ]
     }).promise();
-    const employee: IEmployee = {
-      restaurantId: '123',
+
+      //locations
+      const location: ILocation = {
+      name:"Default Location"
+      };
+      locationRes = await CreateLocationService.create(location);
+
+      //admin
+      const admin: IEmployee = {
+      locationId:locationRes.pk,
       firstName: eventBody.firstName,
       lastName: eventBody.lastName,
       email: eventBody.email,
       roleId: 'xyz',
-      cognitoUsername: newUserRes.User.Username
+      cognitoUsername: newUserRes.User.Username,
+      isAdmin:true
     };
 
-    employeeRes = await CreateEmployeeService.create(employee.restaurantId, employee);
+    employeeRes = await CreateEmployeeService.create(locationRes.pk, admin);
   } catch (error) {
     return errorResponse(error.statusCode, error.message)
   }
   
   const testResponse = {
     userPoolId: USER_POOL_ID,
-    tableName: TABLE_NAME,
     newUserRes,
-    employeeRes
+    employeeRes,
+    locationRes
   }
   return successResponse(testResponse)
 }

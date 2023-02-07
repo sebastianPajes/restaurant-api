@@ -1,19 +1,11 @@
-export interface IEmployee {
-    restaurantId: string
-    firstName: string
-    lastName: string
-    email: string
-    tableIds?: Array<string>
-    roleId: string
-    cognitoUsername: string
-}
 
-export class Employee implements IEmployee {
-    restaurantId: string
-    firstName: string
-    lastName: string
-    email: string
-    tableIds?: Array<string>
-    roleId: string
-    cognitoUsername: string
+export interface IEmployee{
+    firstName: string;
+    lastName: string;
+    locationId:string;
+    email: string;
+    tableIds?: [string];
+    roleId?: string;
+    cognitoUsername: string; 
+    isAdmin:boolean; 
 }
