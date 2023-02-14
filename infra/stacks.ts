@@ -136,6 +136,24 @@ export class RestaurantApiStack extends Stack {
         actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem'],
       })
     })
+    const { lambdaFnAlias: getEmployeeByCognitoUser } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-employee-by-cognito-user-handler',
+      handler: 'handlers/get-employee-by-cognito-user.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        EMPLOYEE_TABLE_NAME: employees.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [employees.tableArn],
+        actions: ['dynamodb:GetItem','dynamodb:Scan','dynamodb:Query'],
+      })
+    })
+
     const { lambdaFnAlias: createCategory } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
@@ -190,6 +208,11 @@ export class RestaurantApiStack extends Stack {
     });
     
     employeesResource.addMethod('POST', new apigw.LambdaIntegration(createEmployee), {
+        authorizer: authorizer,
+        authorizationType: apigw.AuthorizationType.COGNITO
+    });
+
+    employeesResource.addResource('{id}').addMethod('GET', new apigw.LambdaIntegration(getEmployeeByCognitoUser), {
         authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
     });

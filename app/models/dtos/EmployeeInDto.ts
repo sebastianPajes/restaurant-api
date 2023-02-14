@@ -10,6 +10,20 @@ export interface ICreateEmployeeInDto{
     roleId?: string
 }
 
+export interface IGetEmployeeInDto{
+    email: string
+}
+export interface IGetEmployeeOutDto{
+    locationId:string,
+    firstName: string,
+    lastName: string,
+    tableIds?: Array<string>,
+    roleId?: string
+}
+
+
+
+
 // export class Employee implements IEmployee { //ask
 //     restaurantId: string
 //     created: boolean

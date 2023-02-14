@@ -6,5 +6,8 @@ export const EmployeeRepository = {
     create: async(restaurantId: string, employee: IEmployee) => {
     const primaryKey = getEmployeePrimaryKeysV2(restaurantId);
         return EmployeeDBModel.create({ ...primaryKey, ...employee })
+    },
+    findByCognitoUser: async(cognitoUsernameParam:string) => {
+        return  EmployeeDBModel.scan({cognitoUsername:{contains:cognitoUsernameParam}}).exec();
     }
 }
