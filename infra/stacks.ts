@@ -174,7 +174,20 @@ export class RestaurantApiStack extends Stack {
     })
 
     // apis
-    const restaurantApi = new apigw.RestApi(this, 'api-restaurant');
+    const restaurantApi = new apigw.RestApi(this, 'api-restaurant',{
+        defaultCorsPreflightOptions: {
+          allowHeaders: [
+            'Content-Type',
+            'X-Amz-Date',
+            'Authorization',
+            'X-Api-Key',
+          ],
+          allowMethods: ['OPTIONS', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+          allowCredentials: true,
+          allowOrigins: ['*'],
+        }
+      }
+    );
     
     const baseResource = restaurantApi.root.addResource('api');
 
