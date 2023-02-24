@@ -48,6 +48,10 @@ export const config = {
             indexName: 'location-index',
             partitionKeyName: 'locationName',
           },
+          categoryIndex: {
+            indexName: 'category-index',
+            partitionKeyName: 'categoryName',
+          },
           discountIndex: {
             indexName: 'processOnDateUTC-index',
             partitionKeyName: 'pk',

@@ -18,7 +18,7 @@ export class RestaurantApiStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props)
 
-
+    
     // cognito
     const userPool = new aws_cognito.UserPool(this, "RestaurantUserPool", {
       removalPolicy: RemovalPolicy.DESTROY,
@@ -86,6 +86,23 @@ export class RestaurantApiStack extends Stack {
         // projectionType: dynamodb.ProjectionType.KEYS_ONLY,
         partitionKey: { 
           name: config.aws.dynamoDB.globalIndexes.locationIndex.partitionKeyName, 
+          type: dynamodb.AttributeType.STRING
+        }
+      }],
+      removePolicy: true
+    })
+
+    const { table: categories } = new DynamoDbTable(this, {
+      prefix: `${config.projectName}`,
+      tableName: `${config.projectName}-categories`,
+      partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      // stream: dynamodb.StreamViewType.KEYS_ONLY,
+      globalSecondaryIndexes: [{
+        indexName: config.aws.dynamoDB.globalIndexes.categoryIndex.indexName,
+        // projectionType: dynamodb.ProjectionType.KEYS_ONLY,
+        partitionKey: { 
+          name: config.aws.dynamoDB.globalIndexes.categoryIndex.partitionKeyName, 
           type: dynamodb.AttributeType.STRING
         }
       }],
@@ -164,12 +181,11 @@ export class RestaurantApiStack extends Stack {
       // reservedConcurrentExecutions: 10,
       sourceCodePath: 'assets/dist',
       environment: {
-        USER_POOL_ID: userPool.userPoolId,
-        TABLE_NAME: employees.tableName
+        CATEGORY_TABLE_NAME: categories.tableName
       },
       role: new aws_iam.PolicyStatement({
-        resources: [userPool.userPoolArn, employees.tableArn],
-        actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem'],
+        resources: [categories.tableArn],
+        actions: ['dynamodb:PutItem']
       })
     })
 
@@ -215,17 +231,23 @@ export class RestaurantApiStack extends Stack {
     });
     
     //appApis
-    const employeesResource = baseResource.addResource('employees');
     const authorizer = new apigw.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
-        cognitoUserPools: [userPool]
+      cognitoUserPools: [userPool]
     });
     
+    const employeesResource = baseResource.addResource('employees');
     employeesResource.addMethod('POST', new apigw.LambdaIntegration(createEmployee), {
         authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
     });
-
     employeesResource.addResource('{id}').addMethod('GET', new apigw.LambdaIntegration(getEmployeeByCognitoUser), {
+        authorizer: authorizer,
+        authorizationType: apigw.AuthorizationType.COGNITO
+    });
+
+
+    const categoriesResource = baseResource.addResource('categories');
+    categoriesResource.addMethod('POST', new apigw.LambdaIntegration(createCategory), {
         authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
     });

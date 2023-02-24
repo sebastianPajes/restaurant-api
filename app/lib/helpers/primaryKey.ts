@@ -30,13 +30,11 @@ export const getEmployeePrimaryKeys = (
   }
 }
 
-
-
 export const getEmployeePrimaryKeysV2 = (
-  restaurantId?: string,
+  locationId?: string,
 ): { pk: Uuid; sk?: string } => {
   const pk = uuidv4();
-  return restaurantId ? { pk, ...getSortKey(restaurantId) } 
+  return locationId ? { pk, ...getSortKey(locationId) } 
                         : { pk, sk: 'restaurantId' };
 }
 
@@ -45,6 +43,16 @@ export const getLocationPrimaryKeysV2 = (
   const pk = uuidv4();
   return { pk }; 
 }
+
+
+export const getCategoryKeys = (
+  locationId?: string,
+): { pk: Uuid; sk?: string } => {
+  const pk = uuidv4();
+  return locationId ? { pk, ...getSortKey(locationId) } 
+                        : { pk, sk: 'locationId' };
+}
+
 
 export const getCartKeys = (
   companyId: string,
