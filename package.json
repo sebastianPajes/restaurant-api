@@ -10,6 +10,7 @@
     "deploy-local": "yarn add-assets && cd infra && STAGE=sandbox cdk deploy --profile $PROFILE",
     "deploy-pipeline": "yarn add-assets && yarn clean-cdk && cd infra && cdk deploy --profile $PROFILE --all;cd..",
     "deploy-sandbox": "yarn add-assets && STAGE=sandbox yarn --cwd infra cdk deploy --profile restaurant",
+    "deploy-sandbox-seb": "yarn add-assets && STAGE=sandbox yarn --cwd infra cdk deploy --profile sebastian171000-sandbox",
     "deploy-only": "cd infra && cdk deploy --profile greenline-sandbox;cd ..",
     "deploy:custom": "yarn add-assets && yarn clean-cdk && cd infra && cdk deploy $STACK",
     "synth": "yarn add-assets && cd infra && cdk synth --validation;cd ..",
