@@ -22,6 +22,13 @@ export const handler = async (event: APIGatewayEvent) => {
   let employeeRes;
   let locationRes;
   try {
+
+  //locations
+    const location: ILocation = {
+      name:"Default Location"
+    };
+    locationRes = await CreateLocationService.create(location);
+
     newUserRes = await cognito.adminCreateUser({
       UserPoolId: USER_POOL_ID,
       Username: eventBody.email,
@@ -31,16 +38,13 @@ export const handler = async (event: APIGatewayEvent) => {
         { Name: 'phone_number', Value: eventBody.phone},
         { Name: 'email', Value: eventBody.email},
         { Name: 'custom:isAdmin', Value: 'true'},
+        { Name: 'custom:locationId', Value: locationRes.pk},
         { Name: 'email_verified', Value: 'true'},
         { Name: 'phone_number_verified', Value: 'true'}
       ]
     }).promise();
 
-      //locations
-      const location: ILocation = {
-      name:"Default Location"
-      };
-      locationRes = await CreateLocationService.create(location);
+
 
       //admin
       const admin: IEmployee = {
