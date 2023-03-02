@@ -94,6 +94,17 @@ export const getCartProductsKeys = (
   return keys
 }
 
+export const getTableKeys = (
+  locationId: string,
+  code: string,
+): { pk: string; sk: string } => {
+  const keys = {
+    pk: generateKey('locationId', locationId),
+    sk: generateKey('code', code),
+  }
+  return keys
+}
+
 // export const getTenantSummaryPrimaryKeys = (companyId?: string) => {
 //   if (companyId) {
 //     return {

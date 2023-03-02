@@ -4,12 +4,14 @@ import { CognitoIdentityServiceProvider } from 'aws-sdk';
 import { ICreateEmployeeInDto } from '../models/dtos/EmployeeInDto';
 import { CreateEmployeeService } from '../services/Employee/CreateEmployeeService';
 import { IEmployee } from '../models/Employee';
+import { getLocationIdFromToken } from '../lib/utils';
 
 const cognito = new CognitoIdentityServiceProvider();
 
 export const handler = async (event: APIGatewayEvent) => {
   
   console.log("request:", JSON.stringify(event, undefined, 2));
+  const locationId = getLocationIdFromToken(event);
   const eventBody: ICreateEmployeeInDto = (event.body ? JSON.parse(event.body) : {});
   const { USER_POOL_ID} = process.env
   let newUserRes;
@@ -24,12 +26,13 @@ export const handler = async (event: APIGatewayEvent) => {
         { Name: 'phone_number', Value: eventBody.phone},
         { Name: 'email', Value: eventBody.email},
         { Name: 'custom:isAdmin', Value: 'false'},
+        { Name: 'custom:locationId', Value: locationId},
         { Name: 'email_verified', Value: 'true'}, //ask
         { Name: 'phone_number_verified', Value: 'true'} //ask
       ]
     }).promise();
     const employee: IEmployee = {
-      locationId: eventBody.locationId,
+      locationId,
       firstName: eventBody.firstName,
       lastName: eventBody.lastName,
       email: eventBody.email,

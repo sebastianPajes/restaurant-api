@@ -27,7 +27,8 @@ export class RestaurantApiStack extends Stack {
         email: true
       },
       customAttributes: {
-        'isAdmin': new aws_cognito.BooleanAttribute({ mutable: false })
+        'isAdmin': new aws_cognito.BooleanAttribute({ mutable: false }),
+        'locationId': new aws_cognito.StringAttribute({ mutable: true })
       } 
     })
 
@@ -125,6 +126,15 @@ export class RestaurantApiStack extends Stack {
       }],
       removePolicy: true
     })
+    
+    const { table: tables } = new DynamoDbTable(this, {
+      prefix: `${config.projectName}`,
+      tableName: `${config.projectName}-tables`,
+      partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removePolicy: true
+    })
 
     // lambdas
     const { layer } = new SharedFunctionLayer(this, {
@@ -170,6 +180,7 @@ export class RestaurantApiStack extends Stack {
         actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem'],
       })
     })
+    
     const { lambdaFnAlias: getEmployeeByCognitoUser } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
@@ -205,6 +216,7 @@ export class RestaurantApiStack extends Stack {
         actions: ['dynamodb:PutItem']
       })
     })
+
     const { lambdaFnAlias: createProduct } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
@@ -220,6 +232,68 @@ export class RestaurantApiStack extends Stack {
       role: new aws_iam.PolicyStatement({
         resources: [products.tableArn],
         actions: ['dynamodb:PutItem']
+      })
+    })
+
+    const { lambdaFnAlias: createOrUpdateTable } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'create-or-update-table',
+      handler: 'handlers/table/create-or-update-table.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        TABLES_TABLE_NAME: tables.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [tables.tableArn],
+        actions: [
+          'dynamodb:PutItem',
+          'dynamodb:UpdateItem',
+          'dynamodb:CreateTable'
+        ],
+      })
+    })
+
+    const { lambdaFnAlias: deleteTable } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'delete-table',
+      handler: 'handlers/table/delete-table.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        TABLES_TABLE_NAME: tables.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [tables.tableArn],
+        actions: [
+          'dynamodb:DeleteItem',
+        ],
+      })
+    })
+
+    const { lambdaFnAlias: getTables } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-tables',
+      handler: 'handlers/table/get-tables.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        TABLES_TABLE_NAME: tables.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [tables.tableArn],
+        actions: [
+          'dynamodb:Query'
+        ],
       })
     })
 
@@ -265,11 +339,15 @@ export class RestaurantApiStack extends Stack {
     });
     
     //appApis
+    const employeesResource = baseResource.addResource('employees');
+    const categoriesResource = baseResource.addResource('categories');
+    const productsResource = baseResource.addResource('products');
+    const tablesResource = baseResource.addResource('tables');
+
     const authorizer = new apigw.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
       cognitoUserPools: [userPool]
     });
     
-    const employeesResource = baseResource.addResource('employees');
     employeesResource.addMethod('POST', new apigw.LambdaIntegration(createEmployee), {
         authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
@@ -280,18 +358,35 @@ export class RestaurantApiStack extends Stack {
     });
 
 
-    const categoriesResource = baseResource.addResource('categories');
     categoriesResource.addMethod('POST', new apigw.LambdaIntegration(createCategory), {
         authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
     });
     
-    const productsResource = baseResource.addResource('products');
     productsResource.addMethod('POST', new apigw.LambdaIntegration(createProduct), {
         authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
     });
 
+    tablesResource.addMethod('POST', new apigw.LambdaIntegration(createOrUpdateTable), {
+      authorizer,
+      authorizationType: apigw.AuthorizationType.COGNITO
+    })
+
+    tablesResource.addMethod('PUT', new apigw.LambdaIntegration(createOrUpdateTable), {
+      authorizer,
+      authorizationType: apigw.AuthorizationType.COGNITO
+    })
+
+    tablesResource.addResource("{code}").addMethod('DELETE', new apigw.LambdaIntegration(deleteTable), {
+      authorizer,
+      authorizationType: apigw.AuthorizationType.COGNITO
+    })
+
+    tablesResource.addMethod('GET', new apigw.LambdaIntegration(getTables), {
+      authorizer,
+      authorizationType: apigw.AuthorizationType.COGNITO
+    })
     
 
   }
