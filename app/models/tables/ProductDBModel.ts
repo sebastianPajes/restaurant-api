@@ -1,14 +1,14 @@
 import dynamoose from '../dynamoose'
 import { Document } from 'dynamoose/dist/Document'
 import { SchemaDefinition } from 'dynamoose/dist/Schema'
-import { ICategory } from '../Category';
+import { IProduct } from '../Product';
 
-export interface ICategorySchema extends ICategory, Document {
+export interface IProductSchema extends IProduct, Document {
   pk: string;
   sk: string;
 }
 
-export const CategoryDefinition: SchemaDefinition = {
+export const ProductDefinition: SchemaDefinition = {
     pk: {
       type: String,
       hashKey: true,
@@ -21,12 +21,20 @@ export const CategoryDefinition: SchemaDefinition = {
       type: String,
       required: true
     },
+    categoryId: {
+      type: String,
+      required: true
+    },
     name: {
       type: String,
       required: true
     },
     description: {
       type: String
+    },
+    price: {
+      type: Number,
+      required:true
     },
     isVisibleInMenu: {
       type: Boolean
@@ -38,11 +46,11 @@ export const CategoryDefinition: SchemaDefinition = {
   
 
 
-const CategorySchema = new dynamoose.Schema(CategoryDefinition)
+const ProductSchema = new dynamoose.Schema(ProductDefinition)
 
-export const CategoryDBModel = dynamoose.model<ICategorySchema>(
-  `${process.env.CATEGORY_TABLE_NAME}`,
-  CategorySchema,
+export const ProductDBModel = dynamoose.model<IProductSchema>(
+  `${process.env.PRODUCT_TABLE_NAME}`,
+  ProductSchema,
   {
     create: false,
     waitForActive: { enabled: false },

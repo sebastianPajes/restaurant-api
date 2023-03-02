@@ -1,32 +1,33 @@
 import { APIGatewayEvent } from 'aws-lambda'
 import { errorResponse, successResponse } from '../lib/responses';
-import { ICategory } from '../models/Category';
-import { ICreateCategoryInDto } from '../models/dtos/CategoryInDto';
-import { CreateCategoryService } from '../services/Category/CreateCategoryService';
+import { ICreateProductInDto } from '../models/dtos/ProductInDto';
+import { IProduct } from '../models/Product';
+import { CreateProductService } from '../services/Product/CreateProductService';
 
 
 export const handler = async (event: APIGatewayEvent) => {
   
   console.log("request:", JSON.stringify(event, undefined, 2));
-  const eventBody: ICreateCategoryInDto = (event.body ? JSON.parse(event.body) : {});
-  let categoryRes;
+  const eventBody: ICreateProductInDto = (event.body ? JSON.parse(event.body) : {});
+  let productRes;
   try {
     //TODO: upload image to S3 and save its assetKey
 
-    const category: ICategory = {
+    const product: IProduct = {
       locationId: eventBody.locationId,
+      categoryId: eventBody.categoryId,
       name:eventBody.name,
       description:eventBody.description,
+      price: parseInt(eventBody.price),
       isVisibleInMenu:true
-
     };
-    categoryRes = await CreateCategoryService.create(category.locationId, category);
+    productRes = await CreateProductService.create(product.locationId,product.categoryId, product);
   } catch (error) {
     return errorResponse(error.statusCode, error.message)
   }
   
   const response = {
-    categoryRes
+    productRes
   }
   return successResponse(response)
 }

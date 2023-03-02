@@ -109,6 +109,23 @@ export class RestaurantApiStack extends Stack {
       removePolicy: true
     })
 
+    const { table: products } = new DynamoDbTable(this, {
+      prefix: `${config.projectName}`,
+      tableName: `${config.projectName}-products`,
+      partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      // stream: dynamodb.StreamViewType.KEYS_ONLY,
+      globalSecondaryIndexes: [{
+        indexName: config.aws.dynamoDB.globalIndexes.productIndex.indexName,
+        // projectionType: dynamodb.ProjectionType.KEYS_ONLY,
+        partitionKey: { 
+          name: config.aws.dynamoDB.globalIndexes.productIndex.partitionKeyName, 
+          type: dynamodb.AttributeType.STRING
+        }
+      }],
+      removePolicy: true
+    })
+
     // lambdas
     const { layer } = new SharedFunctionLayer(this, {
       prefix: `${config.projectName}`,
@@ -188,6 +205,23 @@ export class RestaurantApiStack extends Stack {
         actions: ['dynamodb:PutItem']
       })
     })
+    const { lambdaFnAlias: createProduct } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'create-product-handler',
+      handler: 'handlers/create-product.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        PRODUCT_TABLE_NAME: products.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [products.tableArn],
+        actions: ['dynamodb:PutItem']
+      })
+    })
 
     // apis
     const restaurantApi = new apigw.RestApi(this, 'api-restaurant',{
@@ -248,6 +282,12 @@ export class RestaurantApiStack extends Stack {
 
     const categoriesResource = baseResource.addResource('categories');
     categoriesResource.addMethod('POST', new apigw.LambdaIntegration(createCategory), {
+        authorizer: authorizer,
+        authorizationType: apigw.AuthorizationType.COGNITO
+    });
+    
+    const productsResource = baseResource.addResource('products');
+    productsResource.addMethod('POST', new apigw.LambdaIntegration(createProduct), {
         authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
     });

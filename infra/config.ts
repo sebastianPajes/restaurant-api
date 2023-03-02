@@ -52,6 +52,10 @@ export const config = {
             indexName: 'category-index',
             partitionKeyName: 'categoryName',
           },
+          productIndex: {
+            indexName: 'product-index',
+            partitionKeyName: 'productName',
+          },
           discountIndex: {
             indexName: 'processOnDateUTC-index',
             partitionKeyName: 'pk',
