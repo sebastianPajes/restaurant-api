@@ -1,6 +1,5 @@
 
 export interface ICreateEmployeeInDto{
-    locationId:string,
     email: string,
     password: string,
     phone: string,
