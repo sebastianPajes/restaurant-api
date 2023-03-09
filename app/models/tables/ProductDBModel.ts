@@ -17,14 +17,6 @@ export const ProductDefinition: SchemaDefinition = {
       type: String,
       rangeKey: true
     },
-    locationId: {
-      type: String,
-      required: true
-    },
-    categoryId: {
-      type: String,
-      required: true
-    },
     name: {
       type: String,
       required: true

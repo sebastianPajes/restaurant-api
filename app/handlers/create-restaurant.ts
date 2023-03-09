@@ -2,10 +2,10 @@ import { APIGatewayEvent } from 'aws-lambda'
 import { errorResponse, successResponse } from '../lib/responses';
 import { CognitoIdentityServiceProvider } from 'aws-sdk';
 import { ICreateRestaurantInDto } from '../models/dtos/RestaurantlnDto';
-import { CreateEmployeeService } from '../services/Employee/CreateEmployeeService';
+import { EmployeeService } from '../services/EmployeeService';
 import { IEmployee} from '../models/Employee';
 import { ILocation} from '../models/Location';
-import { CreateLocationService } from '../services/Location/CreateLocationService';
+import { LocationService } from '../services/LocationService';
 /**
  * Your lambda handler
  * see infra/stacks.ts for to see where this function is created
@@ -27,8 +27,9 @@ export const handler = async (event: APIGatewayEvent) => {
     const location: ILocation = {
       name:"Default Location"
     };
-    locationRes = await CreateLocationService.create(location);
+    locationRes = await LocationService.create(location);
 
+    const locationId = locationRes.pk.split('#')[1];
     newUserRes = await cognito.adminCreateUser({
       UserPoolId: USER_POOL_ID,
       Username: eventBody.email,
@@ -38,7 +39,7 @@ export const handler = async (event: APIGatewayEvent) => {
         { Name: 'phone_number', Value: eventBody.phone},
         { Name: 'email', Value: eventBody.email},
         { Name: 'custom:isAdmin', Value: 'true'},
-        { Name: 'custom:locationId', Value: locationRes.pk},
+        { Name: 'custom:locationId', Value: locationId},
         { Name: 'email_verified', Value: 'true'},
         { Name: 'phone_number_verified', Value: 'true'}
       ]
@@ -48,16 +49,14 @@ export const handler = async (event: APIGatewayEvent) => {
 
       //admin
       const admin: IEmployee = {
-      locationId:locationRes.pk,
       firstName: eventBody.firstName,
       lastName: eventBody.lastName,
       email: eventBody.email,
       roleId: 'xyz',
-      cognitoUsername: newUserRes.User.Username,
       isAdmin:true
     };
 
-    employeeRes = await CreateEmployeeService.create(locationRes.pk, admin);
+    employeeRes = await EmployeeService.create(locationId, newUserRes.User.Username, admin);
   } catch (error) {
     return errorResponse(error.statusCode, error.message)
   }

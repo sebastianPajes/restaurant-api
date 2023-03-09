@@ -4,7 +4,13 @@ import { ProductDBModel } from "../../models/tables/ProductDBModel";
 
 export const ProductRepository = {
     create: async(locationId: string, categoryId: string, product: IProduct) => {
-    const primaryKey = getProductKeys(locationId,categoryId);
-        return ProductDBModel.create({ ...primaryKey, ...product });
-    }
+    const productKeys = getProductKeys(locationId,categoryId);
+        return await ProductDBModel.create({ ...productKeys, ...product });
+    }, 
+    getByLocation: async(locationId: string) => {
+        const productKeys = getProductKeys(locationId);
+        return await ProductDBModel.query('pk')
+        .eq(productKeys.pk)
+        .exec();
+    },
 }

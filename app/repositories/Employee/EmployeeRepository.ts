@@ -1,13 +1,19 @@
-import { getEmployeePrimaryKeysV2 } from "../../lib/helpers/primaryKey"
+import { getEmployeePrimaryKeys } from "../../lib/helpers/primaryKey"
 import { IEmployee } from "../../models/Employee";
 import { EmployeeDBModel } from "../../models/tables/EmployeeDBModel";
 
 export const EmployeeRepository = {
-    create: async(restaurantId: string, employee: IEmployee) => {
-    const primaryKey = getEmployeePrimaryKeysV2(restaurantId);
-        return EmployeeDBModel.create({ ...primaryKey, ...employee })
+    create: async(locationId: string, cognitoUsername:string, employee: IEmployee) => {
+    const employeeKeys = getEmployeePrimaryKeys(locationId, cognitoUsername);
+        return await EmployeeDBModel.create({ ...employeeKeys, ...employee })
     },
-    findByCognitoUser: async(cognitoUsernameParam:string) => {
-        return  EmployeeDBModel.scan({cognitoUsername:{contains:cognitoUsernameParam}}).exec();
+    getByCognitoUser: async(locationId: string, cognitoUsernameParam:string) => {
+        const employeeKeys = getEmployeePrimaryKeys(locationId, cognitoUsernameParam)
+        return await EmployeeDBModel.query('pk')
+        .eq(employeeKeys.pk)
+        .and()
+        .where('sk')
+        .eq(employeeKeys.sk)
+        .exec();
     }
 }

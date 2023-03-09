@@ -8,33 +8,26 @@ const generateKey = (key: string, value: string | number | boolean) =>
 const generateKey2 = (key: string, value: string | number | boolean,key2: string, value2: string | number | boolean) =>
   `${key}#${value}-${key2}#${value2}`.toLowerCase().replace(/\s/g, '')
 
-const getPartitionKey = (companyId: string) => ({
-  pk: generateKey('companyId', companyId),
+const getPartitionKey = (locationId: string) => ({
+  pk: generateKey('locationId', locationId),
 })
 
 const getSortKey = (locationId: string) => ({
-  sk: generateKey('locationId', locationId),
+  sk: generateKey('sk', locationId),
 })
 
 const getSortKey2 = (locationId: string, categoryId: string) => ({
-  sk: generateKey2('locationId', locationId,'categoryId', categoryId),
+  sk: generateKey2('locationId', locationId,'sk', categoryId),
 })
 
 export const getEmployeePrimaryKeys = (
-  companyId: string,
-  locationId?: string,
-): { pk: string; sk?: string } => {
-  if (locationId) {
-    return {
-      ...getPartitionKey(companyId),
-      ...getSortKey(locationId),
+  locationId:string,
+  cognitoUsername:string
+): { pk: string; sk: string } => {
+  return {
+      ...getPartitionKey(locationId),
+      sk:generateKey('cognitoUsername',cognitoUsername)
     }
-  } else {
-    return {
-      ...getPartitionKey(companyId),
-      sk: 'locationId',
-    }
-  }
 }
 
 export const getEmployeePrimaryKeysV2 = (
@@ -47,26 +40,28 @@ export const getEmployeePrimaryKeysV2 = (
 
 export const getLocationPrimaryKeysV2 = (
 ): { pk: Uuid } => {
-  const pk = uuidv4();
-  return { pk }; 
+  const locationId = uuidv4();
+  return { ...getPartitionKey(locationId) }; 
 }
 
 
 export const getCategoryKeys = (
-  locationId?: string,
-): { pk: Uuid; sk?: string } => {
-  const pk = uuidv4();
-  return locationId ? { pk, ...getSortKey(locationId) } 
-                        : { pk, sk: 'locationId' };
+  locationId: string,
+): { pk: string; sk: Uuid } => {
+  const categoryId = uuidv4();
+  return { ...getPartitionKey(locationId),sk:generateKey('categoryId',categoryId)} 
 }
 
 
 export const getProductKeys = (
   locationId: string,
-  categoryId:string
-): { pk: Uuid; sk?: string } => {
-  const pk = uuidv4();
-  return { pk, ...getSortKey2(locationId,categoryId) }
+  categoryId?:string
+): { pk: Uuid; sk: string } => {
+  const productId = uuidv4();
+  return {
+      ...getPartitionKey(locationId),
+      sk: `${categoryId?generateKey('categoryId', categoryId)+'/':''}${generateKey('productId',productId)}`
+    }
 }
 
 
@@ -76,8 +71,8 @@ export const getCartKeys = (
   sessionId: string,
 ): { pk: string; sk: string } => {
   const keys = {
-    pk: `${generateKey('companyId', companyId)}-${generateKey('restaurantId', restaurantId)}`,
-    sk: `${generateKey('sessionid', sessionId)}-cart`,
+    pk: `${generateKey('companyId', companyId)}/${generateKey('restaurantId', restaurantId)}`,
+    sk: `${generateKey('sessionid', sessionId)}/cart`,
   }
   return keys
 }
@@ -88,8 +83,8 @@ export const getCartProductsKeys = (
   sessionId: string,
 ): { pk: string; sk: string } => {
   const keys = {
-    pk: `${generateKey('companyId', companyId)}-${generateKey('restaurantId', restaurantId)}`,
-    sk: `${generateKey('sessionid', sessionId)}-productid#`,
+    pk: `${generateKey('companyId', companyId)}/${generateKey('restaurantId', restaurantId)}`,
+    sk: `${generateKey('sessionid', sessionId)}/productid#`,
   }
   return keys
 }

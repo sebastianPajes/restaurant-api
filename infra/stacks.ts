@@ -97,16 +97,8 @@ export class RestaurantApiStack extends Stack {
       prefix: `${config.projectName}`,
       tableName: `${config.projectName}-categories`,
       partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      // stream: dynamodb.StreamViewType.KEYS_ONLY,
-      globalSecondaryIndexes: [{
-        indexName: config.aws.dynamoDB.globalIndexes.categoryIndex.indexName,
-        // projectionType: dynamodb.ProjectionType.KEYS_ONLY,
-        partitionKey: { 
-          name: config.aws.dynamoDB.globalIndexes.categoryIndex.partitionKeyName, 
-          type: dynamodb.AttributeType.STRING
-        }
-      }],
       removePolicy: true
     })
 
@@ -114,16 +106,8 @@ export class RestaurantApiStack extends Stack {
       prefix: `${config.projectName}`,
       tableName: `${config.projectName}-products`,
       partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      // stream: dynamodb.StreamViewType.KEYS_ONLY,
-      globalSecondaryIndexes: [{
-        indexName: config.aws.dynamoDB.globalIndexes.productIndex.indexName,
-        // projectionType: dynamodb.ProjectionType.KEYS_ONLY,
-        partitionKey: { 
-          name: config.aws.dynamoDB.globalIndexes.productIndex.partitionKeyName, 
-          type: dynamodb.AttributeType.STRING
-        }
-      }],
       removePolicy: true
     })
     
@@ -166,7 +150,7 @@ export class RestaurantApiStack extends Stack {
       prefix: config.projectName,
       layer,
       functionName: 'create-employee-handler',
-      handler: 'handlers/create-employee.handler',
+      handler: 'handlers/employee/create-employee.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -185,7 +169,7 @@ export class RestaurantApiStack extends Stack {
       prefix: config.projectName,
       layer,
       functionName: 'get-employee-by-cognito-user-handler',
-      handler: 'handlers/get-employee-by-cognito-user.handler',
+      handler: 'handlers/employee/get-employee-by-cognito-user.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -195,7 +179,7 @@ export class RestaurantApiStack extends Stack {
       },
       role: new aws_iam.PolicyStatement({
         resources: [employees.tableArn],
-        actions: ['dynamodb:GetItem','dynamodb:Scan','dynamodb:Query'],
+        actions: ['dynamodb:Scan','dynamodb:Query'],
       })
     })
 
@@ -203,7 +187,7 @@ export class RestaurantApiStack extends Stack {
       prefix: config.projectName,
       layer,
       functionName: 'create-category-handler',
-      handler: 'handlers/create-category.handler',
+      handler: 'handlers/category/create-category.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -217,11 +201,29 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
+    const { lambdaFnAlias: getCategories } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-categories-handler',
+      handler: 'handlers/category/get-categories.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        CATEGORY_TABLE_NAME: categories.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [categories.tableArn],
+        actions: ['dynamodb:Scan','dynamodb:Query'],
+      })
+    })
+
     const { lambdaFnAlias: createProduct } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
       functionName: 'create-product-handler',
-      handler: 'handlers/create-product.handler',
+      handler: 'handlers/product/create-product.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -232,6 +234,24 @@ export class RestaurantApiStack extends Stack {
       role: new aws_iam.PolicyStatement({
         resources: [products.tableArn],
         actions: ['dynamodb:PutItem']
+      })
+    })
+
+    const { lambdaFnAlias: getProducts } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-products-handler',
+      handler: 'handlers/product/get-products.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        PRODUCT_TABLE_NAME: products.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [products.tableArn],
+        actions: ['dynamodb:Scan','dynamodb:Query'],
       })
     })
 
@@ -362,10 +382,19 @@ export class RestaurantApiStack extends Stack {
         authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
     });
+    categoriesResource.addMethod('GET', new apigw.LambdaIntegration(getCategories), {
+        authorizer: authorizer,
+        authorizationType: apigw.AuthorizationType.COGNITO
+    });
     
     productsResource.addMethod('POST', new apigw.LambdaIntegration(createProduct), {
         authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
+    });
+
+    productsResource.addMethod('GET', new apigw.LambdaIntegration(getProducts), {
+      authorizer: authorizer,
+      authorizationType: apigw.AuthorizationType.COGNITO
     });
 
     tablesResource.addMethod('POST', new apigw.LambdaIntegration(createOrUpdateTable), {

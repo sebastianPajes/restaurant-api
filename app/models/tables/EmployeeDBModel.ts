@@ -17,10 +17,6 @@ export const EmployeeDefinition: SchemaDefinition = {
       type: String,
       rangeKey: true
     },
-    locationId: {
-      type: String,
-      required: true
-    },
     firstName: {
       type: String,
       required: true
@@ -38,10 +34,6 @@ export const EmployeeDefinition: SchemaDefinition = {
     },
     roleId: {
       type: String
-    },
-    cognitoUsername: {
-        type: String,
-        required: true
     },
     isAdmin:{
       type: Boolean,

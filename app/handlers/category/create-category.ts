@@ -1,9 +1,9 @@
 import { APIGatewayEvent } from 'aws-lambda'
-import { errorResponse, successResponse } from '../lib/responses';
-import { ICategory } from '../models/Category';
-import { ICreateCategoryInDto } from '../models/dtos/CategoryInDto';
-import { CreateCategoryService } from '../services/Category/CreateCategoryService';
-import { getLocationIdFromToken } from "../lib/utils";
+import { errorResponse, successResponse } from '../../lib/responses';
+import { ICategory } from '../../models/Category';
+import { ICreateCategoryInDto } from '../../models/dtos/CategoryInDto';
+import { CategoryService } from '../../services/CategoryService';
+import { getLocationIdFromToken } from "../../lib/utils";
 
 
 export const handler = async (event: APIGatewayEvent) => {
@@ -16,13 +16,11 @@ export const handler = async (event: APIGatewayEvent) => {
     //TODO: upload image to S3 and save its assetKey
 
     const category: ICategory = {
-      locationId,
       name:eventBody.name,
       description:eventBody.description,
       isVisibleInMenu:true
-
     };
-    categoryRes = await CreateCategoryService.create(category.locationId, category);
+    categoryRes = await CategoryService.create(locationId, category);
   } catch (error) {
     return errorResponse(error.statusCode, error.message)
   }

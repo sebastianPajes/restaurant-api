@@ -17,10 +17,6 @@ export const CategoryDefinition: SchemaDefinition = {
       type: String,
       rangeKey: true
     },
-    locationId: {
-      type: String,
-      required: true
-    },
     name: {
       type: String,
       required: true

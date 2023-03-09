@@ -1,7 +1,5 @@
 
 export interface IProduct{
-    locationId:string;
-    categoryId:string;
     name:string;
     description?:string;
     price:number;
