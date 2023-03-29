@@ -1,5 +1,4 @@
 import { Uuid } from "aws-sdk/clients/groundstation";
-import { lutimesSync } from "fs";
 import { v4 as uuidv4 } from "uuid";
 
 const generateKey = (key: string, value: string | number | boolean) =>
@@ -12,12 +11,16 @@ const getPartitionKey = (companyId: string) => ({
   pk: generateKey('companyId', companyId),
 })
 
-const getSortKey = (locationId: string) => ({
+const getLocationSortKey = (locationId: string) => ({
   sk: generateKey('locationId', locationId),
 })
 
-const getSortKey2 = (locationId: string, categoryId: string) => ({
+const getCategorySortKey = (locationId: string, categoryId: string) => ({
   sk: generateKey2('locationId', locationId,'categoryId', categoryId),
+})
+
+const getSortKey = (keyValue: string, keyName: string) => ({
+  sk: generateKey(keyName, keyValue),
 })
 
 export const getEmployeePrimaryKeys = (
@@ -27,7 +30,7 @@ export const getEmployeePrimaryKeys = (
   if (locationId) {
     return {
       ...getPartitionKey(companyId),
-      ...getSortKey(locationId),
+      ...getLocationSortKey(locationId),
     }
   } else {
     return {
@@ -41,7 +44,7 @@ export const getEmployeePrimaryKeysV2 = (
   locationId?: string,
 ): { pk: Uuid; sk?: string } => {
   const pk = uuidv4();
-  return locationId ? { pk, ...getSortKey(locationId) } 
+  return locationId ? { pk, ...getLocationSortKey(locationId) } 
                         : { pk, sk: 'restaurantId' };
 }
 
@@ -56,7 +59,7 @@ export const getCategoryKeys = (
   locationId?: string,
 ): { pk: Uuid; sk?: string } => {
   const pk = uuidv4();
-  return locationId ? { pk, ...getSortKey(locationId) } 
+  return locationId ? { pk, ...getLocationSortKey(locationId) } 
                         : { pk, sk: 'locationId' };
 }
 
@@ -66,7 +69,7 @@ export const getProductKeys = (
   categoryId:string
 ): { pk: Uuid; sk?: string } => {
   const pk = uuidv4();
-  return { pk, ...getSortKey2(locationId,categoryId) }
+  return { pk, ...getCategorySortKey(locationId,categoryId) }
 }
 
 
@@ -94,6 +97,56 @@ export const getCartProductsKeys = (
   return keys
 }
 
+const keys = {
+  pk: {
+    locationId: "abc"
+  },
+  sk: {
+    partyId: "xyz",
+    type: "waitlist"
+  }
+}
+
+const result = {
+  pk: "locationid#abc",
+  sk: "partyid#xyz-type#waitlist"
+}
+
+export const getPartyKeys = (
+  locationId: string,
+  partyId?: string,
+  type?: string,
+): { pk: string; sk: string } => {
+  if (partyId) {
+    return {
+      pk: generateKey('locationId', locationId),
+      sk: `${generateKey('partyId', partyId)}-type#${type}`,
+    }
+  } else {
+    return {
+      pk: generateKey('locationId', locationId),
+      sk: `${generateKey('partyId', uuidv4())}-type#${type}`,
+    }
+  }
+}
+
+export const getCustomerHistoryKeys = (
+  locationId: string,
+  customerHistoryId?: string,
+): { pk: string; sk: string } => {
+  if (customerHistoryId) {
+    return {
+      pk: generateKey('locationId', locationId),
+      sk: `${generateKey('customerHistoryId', customerHistoryId)}`,
+    }
+  } else {
+    return {
+      pk: generateKey('locationId', locationId),
+      sk: `${generateKey('partyId', uuidv4())}`,
+    }
+  }
+}
+
 export const getTableKeys = (
   locationId: string,
   code: string,
@@ -105,12 +158,14 @@ export const getTableKeys = (
   return keys
 }
 
-// export const getTenantSummaryPrimaryKeys = (companyId?: string) => {
-//   if (companyId) {
-//     return {
-//       pk: 'summary',
-//       sk: generateKey(RetailerConfigKeyNames.TENANT_ID, companyId),
-//     }
-//   }
-//   return { pk: `summary` }
-// }
+interface DynamoKeys {
+  pk: Record<string, string | number | boolean>;
+  sk?: Record<string, string | number | boolean>;
+}
+
+export function formatDynamoKeys(keys: DynamoKeys): { pk: string; sk: string } {
+  const pkValues = Object.entries(keys.pk).map(([key, value]) => generateKey(key, value)).join("-");
+  const skValues = Object.entries(keys.sk).map(([key, value]) => generateKey(key, value)).join("-");
+
+  return { pk: pkValues, sk: skValues };
+}

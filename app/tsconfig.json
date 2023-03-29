@@ -5,7 +5,9 @@
     "noImplicitAny": true,
     "preserveConstEnums": true,
     "outDir": "./dist",
-    "sourceMap": false
+    "sourceMap": false,
+    "esModuleInterop": true,
+    "experimentalDecorators": true
   },
   "exclude": ["node_modules", "**/*.spec.ts"]
 }
