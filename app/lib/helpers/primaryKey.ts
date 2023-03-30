@@ -163,9 +163,11 @@ interface DynamoKeys {
   sk?: Record<string, string | number | boolean>;
 }
 
-export function formatDynamoKeys(keys: DynamoKeys): { pk: string; sk: string } {
+export function formatDynamoKeys(keys: DynamoKeys): { pk: string; sk?: string } {
   const pkValues = Object.entries(keys.pk).map(([key, value]) => generateKey(key, value)).join("-");
+  if (!keys.sk) return { pk: pkValues }
   const skValues = Object.entries(keys.sk).map(([key, value]) => generateKey(key, value)).join("-");
 
+  console.log(pkValues, skValues)
   return { pk: pkValues, sk: skValues };
 }

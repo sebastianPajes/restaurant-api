@@ -4,7 +4,13 @@ import { ICallbackResponse } from '../../../models/types/ICallbackResponse'
 import { LambdaErrorParser } from '../errorHelpers/LambdaErrorParser'
 
 export const errorWrapper = (context: Context, error: any): Required<ICallbackResponse<undefined>> => {
-  const parsedError = plainToInstance(LambdaErrorParser, { error })
+  let parsedError;
+  try {
+    parsedError = plainToInstance(LambdaErrorParser, { error })
+  } catch(error) {
+    console.log(error)
+  }
+  
   
   return {
     statusCode: parsedError.statusCode | error.statusCode,

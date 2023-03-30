@@ -1,13 +1,34 @@
-import { getEmployeePrimaryKeysV2 } from "../../lib/helpers/primaryKey"
-import { IEmployee } from "../../models/Employee";
-import { EmployeeDBModel } from "../../models/tables/EmployeeDBModel";
+import { formatDynamoKeys } from "../../lib/helpers/primaryKey";
+import { IEmployeePrimaryKeyParams, IPersistEmployeeParams } from "../../models/Employee";
+import { EmployeeDBModel } from "../../models/tables/Employee/EmployeeDBModel";
+
 
 export const EmployeeRepository = {
-    create: async(restaurantId: string, employee: IEmployee) => {
-    const primaryKey = getEmployeePrimaryKeysV2(restaurantId);
-        return EmployeeDBModel.create({ ...primaryKey, ...employee })
+    persist: async({primaryKeys: {locationId, id}, attr}: IPersistEmployeeParams) => {
+        const primaryKey = formatDynamoKeys({pk: { locationId }, sk: { id }})
+
+        const Employee = new EmployeeDBModel({
+            ...primaryKey,
+            ...attr
+        })
+
+        console.log(Employee)
+
+        return await Employee.save()
     },
-    findByCognitoUser: async(cognitoUsernameParam:string) => {
-        return  EmployeeDBModel.scan({cognitoUsername:{contains:cognitoUsernameParam}}).exec();
+
+    getByLocation: async(locationId: string) => {
+        const primaryKey = formatDynamoKeys({pk: { locationId }})
+        return await EmployeeDBModel.query('pk')
+        .eq(primaryKey.pk)
+        .exec()
+    },
+
+    getById: async({ locationId, id }: IEmployeePrimaryKeyParams) => {
+
+        const primaryKey = formatDynamoKeys({pk: { locationId }, sk: { id }})
+
+        return await EmployeeDBModel.get(primaryKey)
+
     }
 }

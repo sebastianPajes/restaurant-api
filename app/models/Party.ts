@@ -1,15 +1,17 @@
 import { Expose, Type } from "class-transformer"
-import { IsBoolean, IsDefined, IsEnum, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator"
+import { IsBoolean, IsDefined, IsEnum, IsISO8601, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator"
 import { CommonEventValidator } from "./eventValidators/CommonEventValidators"
-import { randomUUID } from "crypto"
 
 export interface IPartyContract {
     employeeId?: string,
     notes?: string,
-    waitingTime: string,
+    waitingTime?: string, // waitlist / minutes range
+    dateTime?: string, // booking / ISO8601
+    duration?: number, // booking / hours
     tableCodes?: string[],
     tags?: string[],
-    active: boolean,
+    seated: boolean,
+    deleted?: boolean,
     source: PartySource,
     customer: ICustomerContract
 }
@@ -28,19 +30,33 @@ export class PartyInDTO implements IPartyContract, Omit<IPartyPrimaryKeyParams, 
     @Expose()
     @IsString()
     @IsOptional()
-    id: string = randomUUID()
+    id: string
     @Expose()
     notes: string
     @Expose()
+    @IsString()
+    @IsOptional()
     waitingTime: string
     @Expose()
-    tableCodes: string[]
+    @IsISO8601()
+    @IsOptional()
+    dateTime: string // Ex: 2023-03-30T13:00:00
+    @Expose()
+    @IsOptional()
+    @IsNumber()
+    duration: number // in hours
+    @Expose()
+    tableCodes: string[] = []
     @Expose()
     tags: string[]
     @Expose()
     @IsBoolean()
     @IsOptional()
-    active: boolean = true;
+    seated: boolean = false;
+    @Expose()
+    @IsBoolean()
+    @IsOptional()
+    deleted: boolean = false;
     @Expose()
     @IsDefined()
     @IsEnum(PartySource)

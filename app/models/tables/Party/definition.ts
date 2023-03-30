@@ -33,7 +33,12 @@ export const PartySchemaDefinition: SchemaDefinition = {
     },
     waitingTime: {
         type: String,
-        required: true,
+    },
+    dateTime: {
+        type: String
+    },
+    duration: {
+        type: Number
     },
     tableCodes: {
         type: Array,
@@ -43,9 +48,13 @@ export const PartySchemaDefinition: SchemaDefinition = {
         type: Array,
         schema: [String]
     },
-    active: {
+    seated: {
         type: Boolean,
         required: true,
+    },
+    deleted: {
+        type: Boolean,
+        required: true
     },
     source: {
         type: String,

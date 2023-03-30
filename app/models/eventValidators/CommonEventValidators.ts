@@ -12,3 +12,10 @@ export class CommonEventValidator {
     @IsString()
     employeeId: string
 }
+
+export class CommonEventByIdValidator extends CommonEventValidator {
+    @Expose()
+    @IsDefined()
+    @IsString()
+    id: string
+}
