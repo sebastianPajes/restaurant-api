@@ -16,9 +16,10 @@ export const handler = async (event: APIGatewayEvent) => {
     //TODO: upload image to S3 and save its assetKey
 
     const category: ICategory = {
-      name:eventBody.name,
-      description:eventBody.description,
-      isVisibleInMenu:true
+      name: eventBody.name,
+      description: eventBody.description,
+      isVisibleInMenu: true,
+      assetKey: eventBody.assetKey
     };
     categoryRes = await CategoryService.create(locationId, category);
   } catch (error) {

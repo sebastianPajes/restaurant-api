@@ -11,7 +11,7 @@ export const handler = async (event: APIGatewayEvent) => {
   const locationId = getLocationIdFromToken(event);
   let employeeRes;
   try {
-    employeeRes = await EmployeeService.getByCognitoUser(locationId, event.pathParameters.id);
+    employeeRes = await EmployeeService.getByCognitoUser(locationId, event.pathParameters?.cognitoUser);
   } catch (error) {
     return errorResponse(error.statusCode, error.message)
   }

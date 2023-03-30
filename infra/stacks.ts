@@ -4,6 +4,7 @@ import {
   aws_dynamodb as dynamodb,
   aws_apigateway as apigw,
   aws_cognito,
+  aws_s3 as s3,
   RemovalPolicy,
   aws_iam,
 } from 'aws-cdk-lib'
@@ -56,6 +57,24 @@ export class RestaurantApiStack extends Stack {
     new CfnBranch(this, 'MainBranch', {
       appId: amplifyRestauranApp.attrAppId,
       branchName: 'main' 
+    });
+
+    // Define an S3 bucket
+    const bucket = new s3.Bucket(this, 'MyBucket', {
+      versioned: true, // Optional: enable versioning for the bucket
+      removalPolicy: RemovalPolicy.DESTROY,
+      cors: [
+        {
+          allowedMethods: [
+            s3.HttpMethods.GET,
+            s3.HttpMethods.POST,
+            s3.HttpMethods.PUT,
+            s3.HttpMethods.HEAD,
+          ],
+          allowedOrigins: ['*'],
+          allowedHeaders: ['*'],
+        },
+      ],
     });
 
     // dynamoDB tables
@@ -183,6 +202,27 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
+
+    const { lambdaFnAlias: deleteEmployee } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'delete-employee',
+      handler: 'handlers/employee/delete-employee.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        EMPLOYEE_TABLE_NAME: employees.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [employees.tableArn],
+        actions: [
+          'dynamodb:DeleteItem',
+        ],
+      })
+    })
+
     const { lambdaFnAlias: createCategory } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
@@ -254,6 +294,29 @@ export class RestaurantApiStack extends Stack {
         actions: ['dynamodb:Scan','dynamodb:Query'],
       })
     })
+
+    const { lambdaFnAlias: getSignedUrl } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-signed-URL-handler',
+      handler: 'handlers/get-signed-URL.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      environment: {
+        BUCKET: bucket.bucketName
+      },
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      role: new aws_iam.PolicyStatement({
+        resources: [bucket.bucketArn],
+        actions: ['s3:PutObject','s3:GetObject']
+      })
+    })
+
+    //i got bit crazy because was not working...
+    bucket.grantPublicAccess();
+    bucket.grantPut(getSignedUrl);
+    bucket.grantReadWrite(getSignedUrl);
 
     const { lambdaFnAlias: createOrUpdateTable } = new LambdaFunction(this, {
       prefix: config.projectName,
@@ -363,6 +426,7 @@ export class RestaurantApiStack extends Stack {
     const categoriesResource = baseResource.addResource('categories');
     const productsResource = baseResource.addResource('products');
     const tablesResource = baseResource.addResource('tables');
+    const uploadsResource = baseResource.addResource('uploads');
 
     const authorizer = new apigw.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
       cognitoUserPools: [userPool]
@@ -372,7 +436,18 @@ export class RestaurantApiStack extends Stack {
         authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
     });
-    employeesResource.addResource('{id}').addMethod('GET', new apigw.LambdaIntegration(getEmployeeByCognitoUser), {
+    
+     const employeeByCognitoUserResource = employeesResource.addResource("{cognitoUser}");
+    
+     employeeByCognitoUserResource.addMethod('DELETE', new apigw.LambdaIntegration(deleteEmployee), {
+      authorizer,
+      authorizationType: apigw.AuthorizationType.COGNITO
+    });
+    // employeesResource.addMethod('PUT', new apigw.LambdaIntegration(createOrUpdateEmployee), {
+    //     authorizer: authorizer,
+    //     authorizationType: apigw.AuthorizationType.COGNITO
+    // });
+    employeeByCognitoUserResource.addMethod('GET', new apigw.LambdaIntegration(getEmployeeByCognitoUser), {
         authorizer: authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO
     });
@@ -393,6 +468,11 @@ export class RestaurantApiStack extends Stack {
     });
 
     productsResource.addMethod('GET', new apigw.LambdaIntegration(getProducts), {
+      authorizer: authorizer,
+      authorizationType: apigw.AuthorizationType.COGNITO
+    });
+
+    uploadsResource.addResource("{fileName}").addMethod('GET', new apigw.LambdaIntegration(getSignedUrl), {
       authorizer: authorizer,
       authorizationType: apigw.AuthorizationType.COGNITO
     });
