@@ -6,7 +6,8 @@ import { Document } from "dynamoose/dist/Document";
 interface ITableDocument extends Document {
     pk: string,
     sk: string,
-    size: number
+    size: number,
+    partyId?: string
 }
 
 const TableSchemaDefinition: SchemaDefinition = {
@@ -20,6 +21,9 @@ const TableSchemaDefinition: SchemaDefinition = {
     },
     size: {
         type: Number
+    },
+    partyId: {
+        type: String
     }
 }
 

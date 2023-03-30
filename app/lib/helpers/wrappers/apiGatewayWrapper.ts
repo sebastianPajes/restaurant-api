@@ -15,13 +15,15 @@ export const apiGatewayWrapper = async <T>(props: IAPIGatewayWrapperProps<T>): P
 
         return responseWrapper(statusCode || 200, result)
     } catch(error) {
-        
+        console.log(`error: ${error}`)
         errorResponse = errorWrapper(context, error)
-        console.log(errorResponse)
+        console.log(`errorResponse: ${errorResponse}`)
         throw new createError[errorResponse.statusCode](JSON.stringify({ message: errorResponse.message }))
     } finally {
+        console.log("finally...")
         if (errorResponse) {
             const { statusCode, ...result } = errorResponse
+            console.log(`statusCode: ${statusCode}, result: ${result}`)
             return responseWrapper(statusCode, result)
         }
     }

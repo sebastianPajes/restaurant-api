@@ -4,4 +4,5 @@ export interface IRestaurantTable extends IRestaurantTableAttr {
 }
 export interface IRestaurantTableAttr {
     size: number,
+    partyId?: string
 }

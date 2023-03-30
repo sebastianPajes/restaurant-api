@@ -42,21 +42,7 @@ export class RestaurantApiStack extends Stack {
       path: 'github-access-token',
     })
 
-    const amplifyRestauranApp = new CfnApp(this, 'restaurant-app', {
-      name: 'restaurantApp',
-      repository: 'https://github.com/sebastianPajes/restaurant-app',
-      oauthToken: gitToken,
-      environmentVariables: [
-        { name: 'USER_POOL_ID', value: userPool.userPoolId },
-        { name: 'USER_POOL_CLIENT', value: userPoolClient.userPoolClientId },
-        { name: 'REGION', value: config.stack.env.region }, 
-    ]
-    });
 
-    new CfnBranch(this, 'MainBranch', {
-      appId: amplifyRestauranApp.attrAppId,
-      branchName: 'main' 
-    });
 
     // dynamoDB tables
     const { table: employees } = new DynamoDbTable(this, {
@@ -151,11 +137,11 @@ export class RestaurantApiStack extends Stack {
       assetPath: 'assets/layer.zip'
     })
 
-    const { lambdaFnAlias: createRestaurant } = new LambdaFunction(this, {
+    const { lambdaFnAlias: createLocation } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'create-restaurant-handler',
-      handler: 'handlers/create-restaurant.handler',
+      functionName: 'create-location-handler',
+      handler: 'handlers/location/create-location.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -171,11 +157,29 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
-    const { lambdaFnAlias: createEmployee } = new LambdaFunction(this, {
+    const { lambdaFnAlias: getLocationById } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'create-employee-handler',
-      handler: 'handlers/create-employee.handler',
+      functionName: 'get-location-by-id-handler',
+      handler: 'handlers/location/get-location-by-id.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        LOCATION_TABLE_NAME: locations.tableName,
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [userPool.userPoolArn, employees.tableArn,locations.tableArn],
+        actions: ['dynamodb:GetItem'],
+      })
+    })
+
+    const { lambdaFnAlias: persistEmployee } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'persist-employee-handler',
+      handler: 'handlers/employee/persist-employee.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -186,15 +190,15 @@ export class RestaurantApiStack extends Stack {
       },
       role: new aws_iam.PolicyStatement({
         resources: [userPool.userPoolArn, employees.tableArn],
-        actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem'],
+        actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem', 'cognito-idp:AdminUpdateUserAttributes'],
       })
     })
-    
-    const { lambdaFnAlias: getEmployeeByCognitoUser } = new LambdaFunction(this, {
+
+    const { lambdaFnAlias: getEmployeeByLocation } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'get-employee-by-cognito-user-handler',
-      handler: 'handlers/get-employee-by-cognito-user.handler',
+      functionName: 'get-employees-by-location-handler',
+      handler: 'handlers/employee/get-employees-by-location.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -204,7 +208,25 @@ export class RestaurantApiStack extends Stack {
       },
       role: new aws_iam.PolicyStatement({
         resources: [employees.tableArn],
-        actions: ['dynamodb:GetItem','dynamodb:Scan','dynamodb:Query'],
+        actions: ['dynamodb:Query'],
+      })
+    })
+    
+    const { lambdaFnAlias: getEmployeeById } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-employee-by-id-handler',
+      handler: 'handlers/employee/get-employee-by-id.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        EMPLOYEE_TABLE_NAME: employees.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [employees.tableArn],
+        actions: ['dynamodb:GetItem'],
       })
     })
 
@@ -316,11 +338,12 @@ export class RestaurantApiStack extends Stack {
       // reservedConcurrentExecutions: 10,
       sourceCodePath: 'assets/dist',
       environment: {
-        PARTY_TABLE_NAME: parties.tableName
+        PARTY_TABLE_NAME: parties.tableName,
+        TABLES_TABLE_NAME: tables.tableName
       },
       role: new aws_iam.PolicyStatement({
-        resources: [parties.tableArn],
-        actions: ['dynamodb:PutItem']
+        resources: [parties.tableArn, tables.tableArn],
+        actions: ['dynamodb:PutItem', 'dynamodb:GetItem']
       })
     })
 
@@ -393,6 +416,25 @@ export class RestaurantApiStack extends Stack {
         }
       }
     );
+
+    console.log(`API URL: ${restaurantApi.url}`)
+
+    const amplifyRestauranApp = new CfnApp(this, 'restaurant-app', {
+      name: 'restaurantApp',
+      repository: 'https://github.com/sebastianPajes/restaurant-app',
+      oauthToken: gitToken,
+      environmentVariables: [
+        { name: 'USER_POOL_ID', value: userPool.userPoolId },
+        { name: 'USER_POOL_CLIENT', value: userPoolClient.userPoolClientId },
+        { name: 'REGION', value: config.stack.env.region }, 
+        { name: 'API', value:  restaurantApi.url}
+    ]
+    });
+
+    new CfnBranch(this, 'MainBranch', {
+      appId: amplifyRestauranApp.attrAppId,
+      branchName: 'main' 
+    });
     
     const baseResource = restaurantApi.root.addResource('api');
 
@@ -415,7 +457,7 @@ export class RestaurantApiStack extends Stack {
     
     usagePlan.addApiKey(apiKey);
     
-    createResource.addMethod('POST', new apigw.LambdaIntegration(createRestaurant), {
+    createResource.addMethod('POST', new apigw.LambdaIntegration(createLocation), {
       apiKeyRequired: true
     });
     
@@ -425,6 +467,7 @@ export class RestaurantApiStack extends Stack {
     const productsResource = baseResource.addResource('products');
     const tablesResource = baseResource.addResource('tables');
     const partyResource = baseResource.addResource('parties');
+    const locationResource = baseResource.addResource('locations');
 
     const authorizer = new apigw.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
       cognitoUserPools: [userPool]
@@ -434,10 +477,16 @@ export class RestaurantApiStack extends Stack {
       authorizer,
       authorizationType: apigw.AuthorizationType.COGNITO
     };
-        
-    employeesResource.addMethod('POST', new apigw.LambdaIntegration(createEmployee), cognitoAuthorizer);
 
-    employeesResource.addResource('{id}').addMethod('GET', new apigw.LambdaIntegration(getEmployeeByCognitoUser), cognitoAuthorizer);
+    locationResource.addMethod('GET', new apigw.LambdaIntegration(getLocationById), cognitoAuthorizer)
+        
+    employeesResource.addMethod('POST', new apigw.LambdaIntegration(persistEmployee), cognitoAuthorizer);
+
+    employeesResource.addMethod('GET', new apigw.LambdaIntegration(getEmployeeByLocation), cognitoAuthorizer);
+
+    employeesResource.addResource('{id}').addMethod('GET', new apigw.LambdaIntegration(getEmployeeById), cognitoAuthorizer);
+
+
 
     categoriesResource.addMethod('POST', new apigw.LambdaIntegration(createCategory), cognitoAuthorizer);
     
