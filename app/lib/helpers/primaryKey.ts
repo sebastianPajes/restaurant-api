@@ -1,23 +1,11 @@
 import { Uuid } from "aws-sdk/clients/groundstation";
-import { lutimesSync } from "fs";
 import { v4 as uuidv4 } from "uuid";
 
 const generateKey = (key: string, value: string | number | boolean) =>
   `${key}#${value}`.toLowerCase().replace(/\s/g, '')
 
-const generateKey2 = (key: string, value: string | number | boolean,key2: string, value2: string | number | boolean) =>
-  `${key}#${value}-${key2}#${value2}`.toLowerCase().replace(/\s/g, '')
-
 const getPartitionKey = (locationId: string) => ({
   pk: generateKey('locationId', locationId),
-})
-
-const getSortKey = (locationId: string) => ({
-  sk: generateKey('sk', locationId),
-})
-
-const getSortKey2 = (locationId: string, categoryId: string) => ({
-  sk: generateKey2('locationId', locationId,'sk', categoryId),
 })
 
 export const getEmployeePrimaryKeys = (
@@ -28,14 +16,6 @@ export const getEmployeePrimaryKeys = (
       ...getPartitionKey(locationId),
       sk:generateKey('cognitoUsername',cognitoUsername)
     }
-}
-
-export const getEmployeePrimaryKeysV2 = (
-  locationId?: string,
-): { pk: Uuid; sk?: string } => {
-  const pk = uuidv4();
-  return locationId ? { pk, ...getSortKey(locationId) } 
-                        : { pk, sk: 'restaurantId' };
 }
 
 export const getLocationPrimaryKeysV2 = (
@@ -89,6 +69,7 @@ export const getCartProductsKeys = (
   return keys
 }
 
+
 export const getTableKeys = (
   locationId: string,
   code: string,
@@ -100,12 +81,16 @@ export const getTableKeys = (
   return keys
 }
 
-// export const getTenantSummaryPrimaryKeys = (companyId?: string) => {
-//   if (companyId) {
-//     return {
-//       pk: 'summary',
-//       sk: generateKey(RetailerConfigKeyNames.TENANT_ID, companyId),
-//     }
-//   }
-//   return { pk: `summary` }
-// }
+interface DynamoKeys {
+  pk: Record<string, string | number | boolean>;
+  sk?: Record<string, string | number | boolean>;
+}
+
+export function formatDynamoKeys(keys: DynamoKeys): { pk: string; sk?: string } {
+  const pkValues = Object.entries(keys.pk).map(([key, value]) => generateKey(key, value)).join("-");
+  if (!keys.sk) return { pk: pkValues }
+  const skValues = Object.entries(keys.sk).map(([key, value]) => generateKey(key, value)).join("-");
+
+  console.log(pkValues, skValues)
+  return { pk: pkValues, sk: skValues };
+}

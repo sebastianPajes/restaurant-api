@@ -1,27 +1,34 @@
-import { getEmployeePrimaryKeys } from "../../lib/helpers/primaryKey"
-import { IEmployee } from "../../models/Employee";
-import { EmployeeDBModel } from "../../models/tables/EmployeeDBModel";
+import { formatDynamoKeys } from "../../lib/helpers/primaryKey";
+import { IEmployeePrimaryKeyParams, IPersistEmployeeParams } from "../../models/Employee";
+import { EmployeeDBModel } from "../../models/tables/Employee/EmployeeDBModel";
+
 
 export const EmployeeRepository = {
-    create: async(locationId: string, cognitoUsername:string, employee: IEmployee) => {
-    const employeeKeys = getEmployeePrimaryKeys(locationId, cognitoUsername);
-        return await EmployeeDBModel.create({ ...employeeKeys, ...employee });
+    persist: async({primaryKeys: {locationId, id}, attr}: IPersistEmployeeParams) => {
+        const primaryKey = formatDynamoKeys({pk: { locationId }, sk: { id }})
+
+        const Employee = new EmployeeDBModel({
+            ...primaryKey,
+            ...attr
+        })
+
+        console.log(Employee)
+
+        return await Employee.save()
     },
-    update: async(locationId: string, cognitoUsername:string, employee: IEmployee) => {
-        const primaryKey = getEmployeePrimaryKeys(locationId, cognitoUsername)
-        return await EmployeeDBModel.update({...primaryKey, ...employee});
-    },
-    getByCognitoUser: async(locationId: string, cognitoUsernameParam:string) => {
-        const employeeKeys = getEmployeePrimaryKeys(locationId, cognitoUsernameParam)
+
+    getByLocation: async(locationId: string) => {
+        const primaryKey = formatDynamoKeys({pk: { locationId }})
         return await EmployeeDBModel.query('pk')
-        .eq(employeeKeys.pk)
-        .and()
-        .where('sk')
-        .eq(employeeKeys.sk)
-        .exec();
+        .eq(primaryKey.pk)
+        .exec()
     },
-    delete: async (locationId: string, cognitoUsername:string) => {
-        const primaryKey = getEmployeePrimaryKeys(locationId, cognitoUsername)
-        return await EmployeeDBModel.delete(primaryKey);
+
+    getById: async({ locationId, id }: IEmployeePrimaryKeyParams) => {
+
+        const primaryKey = formatDynamoKeys({pk: { locationId }, sk: { id }})
+
+        return await EmployeeDBModel.get(primaryKey)
+
     }
 }

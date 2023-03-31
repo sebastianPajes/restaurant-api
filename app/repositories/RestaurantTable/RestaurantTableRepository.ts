@@ -19,12 +19,7 @@ export const RestaurantTableRepository = {
     },
     getByCode: async (locationId: string, code: string) => {
         const primaryKey = getTableKeys(locationId, code)
-        return await TableDBModel.query('pk')
-        .eq(primaryKey.pk)
-        .and()
-        .where('sk')
-        .eq(primaryKey.sk)
-        .exec()
+        return await TableDBModel.get(primaryKey)
     },
     delete: async (locationId: string, code: string) => {
         const primaryKey = getTableKeys(locationId, code)

@@ -43,21 +43,7 @@ export class RestaurantApiStack extends Stack {
       path: 'github-access-token',
     })
 
-    const amplifyRestauranApp = new CfnApp(this, 'restaurant-app', {
-      name: 'restaurantApp',
-      repository: 'https://github.com/sebastianPajes/restaurant-app',
-      oauthToken: gitToken,
-      environmentVariables: [
-        { name: 'USER_POOL_ID', value: userPool.userPoolId },
-        { name: 'USER_POOL_CLIENT', value: userPoolClient.userPoolClientId },
-        { name: 'REGION', value: config.stack.env.region }, 
-    ]
-    });
 
-    new CfnBranch(this, 'MainBranch', {
-      appId: amplifyRestauranApp.attrAppId,
-      branchName: 'main' 
-    });
 
     // Define an S3 bucket
     const bucket = new s3.Bucket(this, 'MyBucket', {
@@ -139,17 +125,26 @@ export class RestaurantApiStack extends Stack {
       removePolicy: true
     })
 
+    const { table: parties } = new DynamoDbTable(this, {
+      prefix: `${config.projectName}`,
+      tableName: `${config.projectName}-parties`,
+      partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removePolicy: true
+    })
+
     // lambdas
     const { layer } = new SharedFunctionLayer(this, {
       prefix: `${config.projectName}`,
       assetPath: 'assets/layer.zip'
     })
 
-    const { lambdaFnAlias: createRestaurant } = new LambdaFunction(this, {
+    const { lambdaFnAlias: createLocation } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'create-restaurant-handler',
-      handler: 'handlers/create-restaurant.handler',
+      functionName: 'create-location-handler',
+      handler: 'handlers/location/create-location.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -165,11 +160,29 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
-    const { lambdaFnAlias: createEmployee } = new LambdaFunction(this, {
+    const { lambdaFnAlias: getLocationById } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'create-employee-handler',
-      handler: 'handlers/employee/create-employee.handler',
+      functionName: 'get-location-by-id-handler',
+      handler: 'handlers/location/get-location-by-id.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        LOCATION_TABLE_NAME: locations.tableName,
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [userPool.userPoolArn, employees.tableArn,locations.tableArn],
+        actions: ['dynamodb:GetItem'],
+      })
+    })
+
+    const { lambdaFnAlias: persistEmployee } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'persist-employee-handler',
+      handler: 'handlers/employee/persist-employee.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -180,15 +193,33 @@ export class RestaurantApiStack extends Stack {
       },
       role: new aws_iam.PolicyStatement({
         resources: [userPool.userPoolArn, employees.tableArn],
-        actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem'],
+        actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem', 'cognito-idp:AdminUpdateUserAttributes'],
+      })
+    })
+
+    const { lambdaFnAlias: getEmployeeByLocation } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-employees-by-location-handler',
+      handler: 'handlers/employee/get-employees-by-location.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        EMPLOYEE_TABLE_NAME: employees.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [employees.tableArn],
+        actions: ['dynamodb:Query'],
       })
     })
     
-    const { lambdaFnAlias: getEmployeeByCognitoUser } = new LambdaFunction(this, {
+    const { lambdaFnAlias: getEmployeeById } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'get-employee-by-cognito-user-handler',
-      handler: 'handlers/employee/get-employee-by-cognito-user.handler',
+      functionName: 'get-employee-by-id-handler',
+      handler: 'handlers/employee/get-employee-by-id.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -198,28 +229,7 @@ export class RestaurantApiStack extends Stack {
       },
       role: new aws_iam.PolicyStatement({
         resources: [employees.tableArn],
-        actions: ['dynamodb:Scan','dynamodb:Query'],
-      })
-    })
-
-
-    const { lambdaFnAlias: deleteEmployee } = new LambdaFunction(this, {
-      prefix: config.projectName,
-      layer,
-      functionName: 'delete-employee',
-      handler: 'handlers/employee/delete-employee.handler',
-      timeoutSecs: 30,
-      memoryMB: 256,
-      // reservedConcurrentExecutions: 10,
-      sourceCodePath: 'assets/dist',
-      environment: {
-        EMPLOYEE_TABLE_NAME: employees.tableName
-      },
-      role: new aws_iam.PolicyStatement({
-        resources: [employees.tableArn],
-        actions: [
-          'dynamodb:DeleteItem',
-        ],
+        actions: ['dynamodb:GetItem'],
       })
     })
 
@@ -380,6 +390,79 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
+    const { lambdaFnAlias: upsertParty } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'upsert-party-handler',
+      handler: 'handlers/party/upsert-party.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        PARTY_TABLE_NAME: parties.tableName,
+        TABLES_TABLE_NAME: tables.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [parties.tableArn, tables.tableArn],
+        actions: ['dynamodb:PutItem', 'dynamodb:GetItem']
+      })
+    })
+
+    const { lambdaFnAlias: deleteParty } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'delete-party-handler',
+      handler: 'handlers/party/delete-party.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        PARTY_TABLE_NAME: parties.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [parties.tableArn],
+        actions: ['dynamodb:DeleteItem']
+      })
+    })
+
+    const { lambdaFnAlias: listPartyByType } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'list-party-by-type-handler',
+      handler: 'handlers/party/list-party-by-type.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        PARTY_TABLE_NAME: parties.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [parties.tableArn],
+        actions: ['dynamodb:Query']
+      })
+    })
+
+    const { lambdaFnAlias: getPartyById } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-party-by-id-handler',
+      handler: 'handlers/party/get-party-by-id.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        PARTY_TABLE_NAME: parties.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [parties.tableArn],
+        actions: ['dynamodb:GetItem']
+      })
+    })
+
     // apis
     const restaurantApi = new apigw.RestApi(this, 'api-restaurant',{
         defaultCorsPreflightOptions: {
@@ -395,6 +478,25 @@ export class RestaurantApiStack extends Stack {
         }
       }
     );
+
+    console.log(`API URL: ${restaurantApi.url}`)
+
+    const amplifyRestauranApp = new CfnApp(this, 'restaurant-app', {
+      name: 'restaurantApp',
+      repository: 'https://github.com/sebastianPajes/restaurant-app',
+      oauthToken: gitToken,
+      environmentVariables: [
+        { name: 'USER_POOL_ID', value: userPool.userPoolId },
+        { name: 'USER_POOL_CLIENT', value: userPoolClient.userPoolClientId },
+        { name: 'REGION', value: config.stack.env.region }, 
+        { name: 'API', value:  restaurantApi.url}
+    ]
+    });
+
+    new CfnBranch(this, 'MainBranch', {
+      appId: amplifyRestauranApp.attrAppId,
+      branchName: 'main' 
+    });
     
     const baseResource = restaurantApi.root.addResource('api');
 
@@ -417,7 +519,7 @@ export class RestaurantApiStack extends Stack {
     
     usagePlan.addApiKey(apiKey);
     
-    createResource.addMethod('POST', new apigw.LambdaIntegration(createRestaurant), {
+    createResource.addMethod('POST', new apigw.LambdaIntegration(createLocation), {
       apiKeyRequired: true
     });
     
@@ -427,75 +529,56 @@ export class RestaurantApiStack extends Stack {
     const productsResource = baseResource.addResource('products');
     const tablesResource = baseResource.addResource('tables');
     const uploadsResource = baseResource.addResource('uploads');
+    const partyResource = baseResource.addResource('parties');
+    const locationResource = baseResource.addResource('locations');
+
 
     const authorizer = new apigw.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
       cognitoUserPools: [userPool]
     });
+
+    const cognitoAuthorizer = {
+      authorizer,
+      authorizationType: apigw.AuthorizationType.COGNITO
+    };
+
+    locationResource.addMethod('GET', new apigw.LambdaIntegration(getLocationById), cognitoAuthorizer)
+        
+    employeesResource.addMethod('POST', new apigw.LambdaIntegration(persistEmployee), cognitoAuthorizer);
+
+    employeesResource.addMethod('GET', new apigw.LambdaIntegration(getEmployeeByLocation), cognitoAuthorizer);
+
+    employeesResource.addResource('{id}').addMethod('GET', new apigw.LambdaIntegration(getEmployeeById), cognitoAuthorizer);
+
+    categoriesResource.addMethod('POST', new apigw.LambdaIntegration(createCategory), cognitoAuthorizer);
     
-    employeesResource.addMethod('POST', new apigw.LambdaIntegration(createEmployee), {
-        authorizer: authorizer,
-        authorizationType: apigw.AuthorizationType.COGNITO
-    });
+    productsResource.addMethod('POST', new apigw.LambdaIntegration(createProduct), cognitoAuthorizer);
+
+    tablesResource.addMethod('POST', new apigw.LambdaIntegration(createOrUpdateTable), cognitoAuthorizer)
+
+    categoriesResource.addMethod('GET', new apigw.LambdaIntegration(getCategories), cognitoAuthorizer);
+
+    tablesResource.addMethod('PUT', new apigw.LambdaIntegration(createOrUpdateTable), cognitoAuthorizer)
+
+    tablesResource.addResource("{code}").addMethod('DELETE', new apigw.LambdaIntegration(deleteTable), cognitoAuthorizer)
+
+    tablesResource.addMethod('GET', new apigw.LambdaIntegration(getTables), cognitoAuthorizer)
+
+    const partyTypeResource = partyResource.addResource("{type}")
+
+    partyTypeResource.addMethod('POST', new apigw.LambdaIntegration(upsertParty), cognitoAuthorizer)
+
+    partyTypeResource.addMethod('GET', new apigw.LambdaIntegration(listPartyByType), cognitoAuthorizer)
     
-     const employeeByCognitoUserResource = employeesResource.addResource("{cognitoUser}");
-    
-     employeeByCognitoUserResource.addMethod('DELETE', new apigw.LambdaIntegration(deleteEmployee), {
-      authorizer,
-      authorizationType: apigw.AuthorizationType.COGNITO
-    });
-    // employeesResource.addMethod('PUT', new apigw.LambdaIntegration(createOrUpdateEmployee), {
-    //     authorizer: authorizer,
-    //     authorizationType: apigw.AuthorizationType.COGNITO
-    // });
-    employeeByCognitoUserResource.addMethod('GET', new apigw.LambdaIntegration(getEmployeeByCognitoUser), {
-        authorizer: authorizer,
-        authorizationType: apigw.AuthorizationType.COGNITO
-    });
+    const partyTypeIdResource = partyTypeResource.addResource("{id}")
 
+    productsResource.addMethod('GET', new apigw.LambdaIntegration(getProducts), cognitoAuthorizer);
 
-    categoriesResource.addMethod('POST', new apigw.LambdaIntegration(createCategory), {
-        authorizer: authorizer,
-        authorizationType: apigw.AuthorizationType.COGNITO
-    });
-    categoriesResource.addMethod('GET', new apigw.LambdaIntegration(getCategories), {
-        authorizer: authorizer,
-        authorizationType: apigw.AuthorizationType.COGNITO
-    });
-    
-    productsResource.addMethod('POST', new apigw.LambdaIntegration(createProduct), {
-        authorizer: authorizer,
-        authorizationType: apigw.AuthorizationType.COGNITO
-    });
+    uploadsResource.addResource("{fileName}").addMethod('GET', new apigw.LambdaIntegration(getSignedUrl), cognitoAuthorizer);
 
-    productsResource.addMethod('GET', new apigw.LambdaIntegration(getProducts), {
-      authorizer: authorizer,
-      authorizationType: apigw.AuthorizationType.COGNITO
-    });
+    partyTypeIdResource.addMethod('DELETE', new apigw.LambdaIntegration(deleteParty), cognitoAuthorizer)
 
-    uploadsResource.addResource("{fileName}").addMethod('GET', new apigw.LambdaIntegration(getSignedUrl), {
-      authorizer: authorizer,
-      authorizationType: apigw.AuthorizationType.COGNITO
-    });
-
-    tablesResource.addMethod('POST', new apigw.LambdaIntegration(createOrUpdateTable), {
-      authorizer,
-      authorizationType: apigw.AuthorizationType.COGNITO
-    })
-
-    tablesResource.addMethod('PUT', new apigw.LambdaIntegration(createOrUpdateTable), {
-      authorizer,
-      authorizationType: apigw.AuthorizationType.COGNITO
-    })
-
-    tablesResource.addResource("{code}").addMethod('DELETE', new apigw.LambdaIntegration(deleteTable), {
-      authorizer,
-      authorizationType: apigw.AuthorizationType.COGNITO
-    })
-
-    tablesResource.addMethod('GET', new apigw.LambdaIntegration(getTables), {
-      authorizer,
-      authorizationType: apigw.AuthorizationType.COGNITO
-    })
+    partyTypeIdResource.addMethod('GET', new apigw.LambdaIntegration(getPartyById), cognitoAuthorizer)
     
 
   }
