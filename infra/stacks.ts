@@ -4,6 +4,7 @@ import {
   aws_dynamodb as dynamodb,
   aws_apigateway as apigw,
   aws_cognito,
+  aws_s3 as s3,
   RemovalPolicy,
   aws_iam,
 } from 'aws-cdk-lib'
@@ -44,6 +45,24 @@ export class RestaurantApiStack extends Stack {
 
 
 
+    // Define an S3 bucket
+    const bucket = new s3.Bucket(this, 'MyBucket', {
+      versioned: true, // Optional: enable versioning for the bucket
+      removalPolicy: RemovalPolicy.DESTROY,
+      cors: [
+        {
+          allowedMethods: [
+            s3.HttpMethods.GET,
+            s3.HttpMethods.POST,
+            s3.HttpMethods.PUT,
+            s3.HttpMethods.HEAD,
+          ],
+          allowedOrigins: ['*'],
+          allowedHeaders: ['*'],
+        },
+      ],
+    });
+
     // dynamoDB tables
     const { table: employees } = new DynamoDbTable(this, {
       prefix: `${config.projectName}`,
@@ -83,16 +102,8 @@ export class RestaurantApiStack extends Stack {
       prefix: `${config.projectName}`,
       tableName: `${config.projectName}-categories`,
       partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      // stream: dynamodb.StreamViewType.KEYS_ONLY,
-      globalSecondaryIndexes: [{
-        indexName: config.aws.dynamoDB.globalIndexes.categoryIndex.indexName,
-        // projectionType: dynamodb.ProjectionType.KEYS_ONLY,
-        partitionKey: { 
-          name: config.aws.dynamoDB.globalIndexes.categoryIndex.partitionKeyName, 
-          type: dynamodb.AttributeType.STRING
-        }
-      }],
       removePolicy: true
     })
 
@@ -100,16 +111,8 @@ export class RestaurantApiStack extends Stack {
       prefix: `${config.projectName}`,
       tableName: `${config.projectName}-products`,
       partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      // stream: dynamodb.StreamViewType.KEYS_ONLY,
-      globalSecondaryIndexes: [{
-        indexName: config.aws.dynamoDB.globalIndexes.productIndex.indexName,
-        // projectionType: dynamodb.ProjectionType.KEYS_ONLY,
-        partitionKey: { 
-          name: config.aws.dynamoDB.globalIndexes.productIndex.partitionKeyName, 
-          type: dynamodb.AttributeType.STRING
-        }
-      }],
       removePolicy: true
     })
     
@@ -234,7 +237,7 @@ export class RestaurantApiStack extends Stack {
       prefix: config.projectName,
       layer,
       functionName: 'create-category-handler',
-      handler: 'handlers/create-category.handler',
+      handler: 'handlers/category/create-category.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -248,11 +251,29 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
+    const { lambdaFnAlias: getCategories } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-categories-handler',
+      handler: 'handlers/category/get-categories.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        CATEGORY_TABLE_NAME: categories.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [categories.tableArn],
+        actions: ['dynamodb:Scan','dynamodb:Query'],
+      })
+    })
+
     const { lambdaFnAlias: createProduct } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
       functionName: 'create-product-handler',
-      handler: 'handlers/create-product.handler',
+      handler: 'handlers/product/create-product.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
@@ -265,6 +286,47 @@ export class RestaurantApiStack extends Stack {
         actions: ['dynamodb:PutItem']
       })
     })
+
+    const { lambdaFnAlias: getProducts } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-products-handler',
+      handler: 'handlers/product/get-products.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        PRODUCT_TABLE_NAME: products.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [products.tableArn],
+        actions: ['dynamodb:Scan','dynamodb:Query'],
+      })
+    })
+
+    const { lambdaFnAlias: getSignedUrl } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-signed-URL-handler',
+      handler: 'handlers/get-signed-URL.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      environment: {
+        BUCKET: bucket.bucketName
+      },
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      role: new aws_iam.PolicyStatement({
+        resources: [bucket.bucketArn],
+        actions: ['s3:PutObject','s3:GetObject']
+      })
+    })
+
+    //i got bit crazy because was not working...
+    bucket.grantPublicAccess();
+    bucket.grantPut(getSignedUrl);
+    bucket.grantReadWrite(getSignedUrl);
 
     const { lambdaFnAlias: createOrUpdateTable } = new LambdaFunction(this, {
       prefix: config.projectName,
@@ -466,8 +528,10 @@ export class RestaurantApiStack extends Stack {
     const categoriesResource = baseResource.addResource('categories');
     const productsResource = baseResource.addResource('products');
     const tablesResource = baseResource.addResource('tables');
+    const uploadsResource = baseResource.addResource('uploads');
     const partyResource = baseResource.addResource('parties');
     const locationResource = baseResource.addResource('locations');
+
 
     const authorizer = new apigw.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
       cognitoUserPools: [userPool]
@@ -486,13 +550,13 @@ export class RestaurantApiStack extends Stack {
 
     employeesResource.addResource('{id}').addMethod('GET', new apigw.LambdaIntegration(getEmployeeById), cognitoAuthorizer);
 
-
-
     categoriesResource.addMethod('POST', new apigw.LambdaIntegration(createCategory), cognitoAuthorizer);
     
     productsResource.addMethod('POST', new apigw.LambdaIntegration(createProduct), cognitoAuthorizer);
 
     tablesResource.addMethod('POST', new apigw.LambdaIntegration(createOrUpdateTable), cognitoAuthorizer)
+
+    categoriesResource.addMethod('GET', new apigw.LambdaIntegration(getCategories), cognitoAuthorizer);
 
     tablesResource.addMethod('PUT', new apigw.LambdaIntegration(createOrUpdateTable), cognitoAuthorizer)
 
@@ -507,6 +571,10 @@ export class RestaurantApiStack extends Stack {
     partyTypeResource.addMethod('GET', new apigw.LambdaIntegration(listPartyByType), cognitoAuthorizer)
     
     const partyTypeIdResource = partyTypeResource.addResource("{id}")
+
+    productsResource.addMethod('GET', new apigw.LambdaIntegration(getProducts), cognitoAuthorizer);
+
+    uploadsResource.addResource("{fileName}").addMethod('GET', new apigw.LambdaIntegration(getSignedUrl), cognitoAuthorizer);
 
     partyTypeIdResource.addMethod('DELETE', new apigw.LambdaIntegration(deleteParty), cognitoAuthorizer)
 

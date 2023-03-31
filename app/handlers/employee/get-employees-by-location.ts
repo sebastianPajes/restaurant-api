@@ -17,10 +17,10 @@ export const handler: APIGatewayProxyHandler = async (event, context) => apiGate
     
     console.log(`validatedEvent: ${validatedEvent}`)
 
-    const parties = await EmployeeRepository.getByLocation(validatedEvent.locationId)
+    const employees = await EmployeeRepository.getByLocation(validatedEvent.locationId)
 
-    console.log(parties)
+    console.log(employees)
 
-    return { message: 'Success', data: { parties } }
+    return { message: 'Success', data: { employees } }
   }
 })
