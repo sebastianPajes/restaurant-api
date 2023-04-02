@@ -4,11 +4,13 @@ import { validationWrapper } from '../../lib/helpers/wrappers/validationWrapper'
 import { apiGatewayWrapper } from '../../lib/helpers/wrappers/apiGatewayWrapper';
 import { CreateLocationInDTO, ICreateLocationParams } from '../../models/Location';
 import { LocationRepository } from '../../repositories/Location/LocationRepository';
-import { CognitoIdentityServiceProvider } from 'aws-sdk';
+import { CognitoIdentityServiceProvider, SSM } from 'aws-sdk';
 import { IPersistEmployeeParams } from '../../models/Employee';
 import { EmployeeRepository } from '../../repositories/Employee/EmployeeRepository';
+import * as QRCode from 'qrcode';
 
 const cognito = new CognitoIdentityServiceProvider();
+const ssm = new SSM();
 const { USER_POOL_ID} = process.env
 
 export const handler: APIGatewayProxyHandler = async (event, context) => apiGatewayWrapper({
@@ -18,6 +20,12 @@ export const handler: APIGatewayProxyHandler = async (event, context) => apiGate
 
     const locationReq = await validationWrapper(CreateLocationInDTO, event.body? JSON.parse(event.body) : {})
 
+    // Generate the QR code URL
+    const qrCodeUrl = `${getWaitlistAppUrl()}?locationId=${locationReq.id}`
+
+    // Generate the QR code image
+    const qrCodeImage = await QRCode.toDataURL(qrCodeUrl)
+
     const locationParam: ICreateLocationParams = {
         primaryKeys: {
             id: locationReq.id
@@ -26,7 +34,7 @@ export const handler: APIGatewayProxyHandler = async (event, context) => apiGate
             name: locationReq.name,
             address: locationReq.address,
             businessHours: locationReq.businessHours,
-            qrCodeWaitlist: "abcd"
+            qrCodeWaitlist: qrCodeImage
         }
     }
     
@@ -74,3 +82,19 @@ export const handler: APIGatewayProxyHandler = async (event, context) => apiGate
     return { message: 'Success', data: {locationRes, newUserRes, employeeRes} }
   }
 })
+
+
+async function getWaitlistAppUrl() {
+  const params = {
+    Name: '/admin/waitlist-app-url',
+    WithDecryption: true,
+  };
+
+  try {
+    const response = await ssm.getParameter(params).promise();
+    return response.Parameter.Value;
+  } catch (error) {
+    console.error('Error fetching waitlist app URL:', error);
+    throw error;
+  }
+}

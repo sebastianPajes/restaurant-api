@@ -1,5 +1,29 @@
 import { SchemaDefinition } from "dynamoose/dist/Schema";
 
+const businessHoursSchema: SchemaDefinition = {
+    Monday: {
+      type: String
+    },
+    Tuesday: {
+      type: String
+    },
+    Wednesday: {
+      type: String
+    },
+    Thursday: {
+      type: String
+    },
+    Friday: {
+      type: String
+    },
+    Saturday: {
+      type: String
+    },
+    Sunday: {
+      type: String
+    }
+  };
+
 export const LocationSchemaDefinition: SchemaDefinition = {
     pk: {
         type: String,
@@ -19,5 +43,6 @@ export const LocationSchemaDefinition: SchemaDefinition = {
     },
     businessHours: {
         type: Object,
+        schema: businessHoursSchema
     }
 };

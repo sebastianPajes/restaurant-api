@@ -7,6 +7,8 @@ import {
   aws_s3 as s3,
   RemovalPolicy,
   aws_iam,
+  CfnOutput,
+  aws_ssm,
 } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import { GetSystemParameterString } from './lib/constructs/ssm'
@@ -14,6 +16,7 @@ import { SharedFunctionLayer, LambdaFunction } from './lib/constructs/lambda'
 import { config } from './config'
 import { CfnApp, CfnBranch } from 'aws-cdk-lib/aws-amplify';
 import { DynamoDbTable } from './lib/constructs/dynamodb';
+import { createHash } from 'crypto'
 
 export class RestaurantApiStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
@@ -481,29 +484,6 @@ export class RestaurantApiStack extends Stack {
 
     console.log(`API URL: ${restaurantApi.url}`)
 
-    const amplifyRestauranApp = new CfnApp(this, 'restaurant-app', {
-      name: 'restaurantApp',
-      repository: 'https://github.com/sebastianPajes/restaurant-app',
-      oauthToken: gitToken,
-      environmentVariables: [
-        { name: 'USER_POOL_ID', value: userPool.userPoolId },
-        { name: 'USER_POOL_CLIENT', value: userPoolClient.userPoolClientId },
-        { name: 'REGION', value: config.stack.env.region }, 
-        { name: 'API', value:  restaurantApi.url}
-    ]
-    });
-
-    new CfnBranch(this, 'MainBranch', {
-      appId: amplifyRestauranApp.attrAppId,
-      branchName: 'main' 
-    });
-    
-    const baseResource = restaurantApi.root.addResource('api');
-
-    //internalApis
-    const baseInternalResource = baseResource.addResource('internal');
-    const createResource = baseInternalResource.addResource('create');
-    
     const usagePlan = new apigw.UsagePlan(this, 'usagePlan', {
       name: 'internal',
       description: 'plan for internal use',
@@ -513,11 +493,70 @@ export class RestaurantApiStack extends Stack {
       }],
     });
     
+
+    const stackName = Stack.of(this).stackName;
+
+    const internalApiKey = generateApiKey(`${stackName}-internalKey`);
+    const waitlistApiKey = generateApiKey(`${stackName}-waitlistKey`);
+
     const apiKey = new apigw.ApiKey(this, 'internalKey', {
       apiKeyName: 'internalKey',
+      value: internalApiKey
+    });
+
+    const waitlistKey = new apigw.ApiKey(this, 'waitlistKey', {
+      apiKeyName: 'waitlistKey',
+      value: waitlistApiKey
+    })
+
+    usagePlan.addApiKey(apiKey);
+    usagePlan.addApiKey(waitlistKey);
+
+    const amplifyRestauranApp = new CfnApp(this, 'restaurant-app', {
+      name: 'restaurantApp',
+      repository: 'https://github.com/sebastianPajes/restaurant-app',
+      oauthToken: gitToken,
+      environmentVariables: [
+        { name: 'REGION', value: config.stack.env.region }, 
+        { name: 'API', value:  restaurantApi.url},
+        { name: 'USER_POOL_ID', value: userPool.userPoolId },
+        { name: 'USER_POOL_CLIENT', value: userPoolClient.userPoolClientId },
+    ]
+    });
+
+    new CfnBranch(this, 'MainBranch', {
+      appId: amplifyRestauranApp.attrAppId,
+      branchName: 'main' 
+    });
+
+    const amplifyWaitlistApp = new CfnApp(this, 'waitlist-app', {
+      name: 'waitlistApp',
+      repository: 'https://github.com/sebastianPajes/waitlist-app',
+      oauthToken: gitToken,
+      environmentVariables: [
+        { name: 'REGION', value: config.stack.env.region }, 
+        { name: 'API', value:  restaurantApi.url},
+        { name: 'API_KEY', value: waitlistApiKey }
+    ]
+    });
+
+    const branchName = 'main'
+
+    new CfnBranch(this, 'waitlist-main-branch', {
+      appId: amplifyWaitlistApp.attrAppId,
+      branchName
     });
     
-    usagePlan.addApiKey(apiKey);
+
+    const amplifyWaitlistAppUrl = `https://${branchName}.${amplifyWaitlistApp.attrAppId}.amplifyapp.com`;
+
+    const baseResource = restaurantApi.root.addResource('api');
+
+    //internalApis
+    const baseInternalResource = baseResource.addResource('internal');
+    const createResource = baseInternalResource.addResource('create');
+    
+
     
     createResource.addMethod('POST', new apigw.LambdaIntegration(createLocation), {
       apiKeyRequired: true
@@ -581,7 +620,34 @@ export class RestaurantApiStack extends Stack {
     partyTypeIdResource.addMethod('GET', new apigw.LambdaIntegration(getPartyById), cognitoAuthorizer)
     
 
+    new CfnOutput(this, 'WaitlistApiKey', {
+      description: 'Waitlist API Key',
+      value: waitlistApiKey,
+      exportName: 'WaitlistApiKey',
+    });
+
+    new CfnOutput(this, 'InternalApiKey', {
+      description: 'Internal API Key',
+      value: internalApiKey,
+      exportName: 'InternalApiKey',
+    });
+
+    new CfnOutput(this, 'AmplifyWaitlistUrl', {
+      description: 'Amplify waitlist url',
+      value: amplifyWaitlistAppUrl,
+      exportName: 'AmplifyWaitlistUrl',
+    });
+
+    new aws_ssm.StringParameter(this, 'WaitlistAppUrlParameter', {
+      parameterName: '/admin/waitlist-app-url',
+      stringValue: amplifyWaitlistAppUrl,
+    });
+
   }
+}
+
+function generateApiKey(input: string): string {
+  return createHash('sha256').update(input).digest('hex').substring(0, 32);
 }
 
 
