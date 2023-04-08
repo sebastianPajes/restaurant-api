@@ -44,9 +44,9 @@ export class PersistEmployeeDTO implements IEmployeeContract {
     @IsPhoneNumber('PE')
     phone: string;
     @Expose()
-    @IsDefined()
+    @IsOptional()
     @IsString()
-    temporaryPassword: string;
+    temporaryPassword: string = 'U201810281@upc';
     @Expose()
     @IsOptional()
     @IsArray()

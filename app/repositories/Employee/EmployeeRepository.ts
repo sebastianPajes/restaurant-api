@@ -30,5 +30,9 @@ export const EmployeeRepository = {
 
         return await EmployeeDBModel.get(primaryKey)
 
+    },
+    deleteById: async ({ locationId, id }: IEmployeePrimaryKeyParams) => {
+        const primaryKey = formatDynamoKeys({pk: { locationId }, sk: { id }})
+        return await EmployeeDBModel.delete(primaryKey)
     }
 }

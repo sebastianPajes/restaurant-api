@@ -236,6 +236,25 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
+    const { lambdaFnAlias: deleteEmployeeById } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'delete-employee-by-id-handler',
+      handler: 'handlers/employee/delete-employee-by-id.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        USER_POOL_ID: userPool.userPoolId,
+        EMPLOYEE_TABLE_NAME: employees.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [employees.tableArn, userPool.userPoolArn],
+        actions: ['dynamodb:DeleteItem', 'cognito-idp:AdminDeleteUser'],
+      })
+    })
+
     const { lambdaFnAlias: createCategory } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
@@ -610,7 +629,11 @@ export class RestaurantApiStack extends Stack {
 
     employeesResource.addMethod('GET', new apigw.LambdaIntegration(getEmployeeByLocation), cognitoAuthorizer);
 
-    employeesResource.addResource('{id}').addMethod('GET', new apigw.LambdaIntegration(getEmployeeById), cognitoAuthorizer);
+    const employeeResourceById = employeesResource.addResource('{id}');
+
+    employeeResourceById.addMethod('GET', new apigw.LambdaIntegration(getEmployeeById), cognitoAuthorizer);
+
+    employeeResourceById.addMethod('DELETE', new apigw.LambdaIntegration(deleteEmployeeById), cognitoAuthorizer);
 
     categoriesResource.addMethod('POST', new apigw.LambdaIntegration(createCategory), cognitoAuthorizer);
     
