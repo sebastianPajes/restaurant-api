@@ -44,5 +44,9 @@ export const LocationSchemaDefinition: SchemaDefinition = {
     businessHours: {
         type: Object,
         schema: businessHoursSchema
+    },
+    defaultWaitingTime: {
+      type: String,
+      required: true
     }
 };

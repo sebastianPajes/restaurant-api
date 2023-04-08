@@ -1,5 +1,5 @@
 import { Expose } from 'class-transformer'
-import { IsDefined, IsString } from 'class-validator'
+import { IsBoolean, IsDefined, IsOptional, IsString } from 'class-validator'
 
 export class CommonEventValidator {
     @Expose()
@@ -8,9 +8,14 @@ export class CommonEventValidator {
     locationId: string
     
     @Expose()
-    @IsDefined()
+    @IsOptional()
     @IsString()
     employeeId: string
+
+    @Expose()
+    @IsDefined()
+    @IsBoolean()
+    isInternal: boolean
 }
 
 export class CommonEventByIdValidator extends CommonEventValidator {

@@ -23,7 +23,8 @@ export interface ILocationContract {
     address: string,
     businessHours: {
         [key in DayOfWeek]?: string;
-    }
+    },
+    defaultWaitingTime: string
 }
 
 export class CreateLocationInDTO implements Omit<ILocationContract, 'qrCodeWaitlist'> {
@@ -41,10 +42,13 @@ export class CreateLocationInDTO implements Omit<ILocationContract, 'qrCodeWaitl
     address: string
     @Expose()
     @IsOptional()
-    // @IsEnum(DayOfWeek, { each: true })
     businessHours: {
         [key in DayOfWeek]?: string;
     }
+    @Expose()
+    @IsDefined()
+    @IsString()
+    defaultWaitingTime: string
     @Expose()
     @IsDefined()
     @IsEmail()

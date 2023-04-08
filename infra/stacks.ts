@@ -158,8 +158,8 @@ export class RestaurantApiStack extends Stack {
         LOCATION_TABLE_NAME: locations.tableName,
       },
       role: new aws_iam.PolicyStatement({
-        resources: [userPool.userPoolArn, employees.tableArn,locations.tableArn],
-        actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem'],
+        resources: [userPool.userPoolArn, employees.tableArn,locations.tableArn, '*'],
+        actions: ['cognito-idp:AdminCreateUser', 'dynamodb:PutItem', 'ssm:GetParameter'],
       })
     })
 
@@ -521,6 +521,13 @@ export class RestaurantApiStack extends Stack {
         { name: 'API', value:  restaurantApi.url},
         { name: 'USER_POOL_ID', value: userPool.userPoolId },
         { name: 'USER_POOL_CLIENT', value: userPoolClient.userPoolClientId },
+    ],
+    customRules: [
+      {
+        source: '</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|ttf|map|json)$)([^.]+$)/>',
+        target: '/index.html',
+        status: '200',
+      }
     ]
     });
 
@@ -537,6 +544,13 @@ export class RestaurantApiStack extends Stack {
         { name: 'REGION', value: config.stack.env.region }, 
         { name: 'API', value:  restaurantApi.url},
         { name: 'API_KEY', value: waitlistApiKey }
+    ],
+    customRules: [
+      {
+        source: '</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|ttf|map|json)$)([^.]+$)/>',
+        target: '/index.html',
+        status: '200',
+      }
     ]
     });
 
@@ -554,13 +568,22 @@ export class RestaurantApiStack extends Stack {
 
     //internalApis
     const baseInternalResource = baseResource.addResource('internal');
+    const internalLocationResource = baseInternalResource.addResource('locations').addResource('{locationId}')
+    const internalPartyResource = internalLocationResource.addResource('parties')
     const createResource = baseInternalResource.addResource('create');
-    
 
     
     createResource.addMethod('POST', new apigw.LambdaIntegration(createLocation), {
       apiKeyRequired: true
     });
+
+    internalLocationResource.addMethod('GET', new apigw.LambdaIntegration(getLocationById), {
+      apiKeyRequired: true
+    })
+
+    internalPartyResource.addResource("{type}").addMethod('POST', new apigw.LambdaIntegration(upsertParty), {
+      apiKeyRequired: true
+    })
     
     //appApis
     const employeesResource = baseResource.addResource('employees');

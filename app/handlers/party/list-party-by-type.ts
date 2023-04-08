@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { APIGatewayProxyHandler } from "aws-lambda";
-import { getDataFromToken } from "../../lib/utils";
+import { getDataFromApiEvent } from "../../lib/utils";
 import { FindPartyByTypeEventValidator, IPartyPrimaryKeyParams } from "../../models/Party";
 import { validationWrapper } from '../../lib/helpers/wrappers/validationWrapper';
 import { apiGatewayWrapper } from '../../lib/helpers/wrappers/apiGatewayWrapper';
@@ -12,7 +12,7 @@ export const handler: APIGatewayProxyHandler = async (event, context) => apiGate
     console.log("request:", JSON.stringify(event, undefined, 2));
 
     const validatedEvent = await validationWrapper(FindPartyByTypeEventValidator, {
-      ...getDataFromToken(event),
+      ...getDataFromApiEvent(event),
         ...event.pathParameters
     })
 

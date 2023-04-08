@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { APIGatewayProxyHandler } from "aws-lambda";
-import { getDataFromToken } from "../../lib/utils";
+import { getDataFromApiEvent } from "../../lib/utils";
 import { IPartyUpdateParams, PartyInDTO, PartySource, PartyTypes, UpsertPartyEventValidator } from "../../models/Party";
 import { validationWrapper } from '../../lib/helpers/wrappers/validationWrapper';
 import { apiGatewayWrapper } from '../../lib/helpers/wrappers/apiGatewayWrapper';
@@ -15,7 +15,7 @@ export const handler: APIGatewayProxyHandler = async (event, context) => apiGate
     console.log("request:", JSON.stringify(event, undefined, 2));
 
     const validatedEvent = await validationWrapper(UpsertPartyEventValidator, {
-      ...getDataFromToken(event),
+      ...getDataFromApiEvent(event),
         ...event.pathParameters
     })
 
@@ -56,7 +56,7 @@ export const handler: APIGatewayProxyHandler = async (event, context) => apiGate
 
       delete partyReq.waitingTime
     } else {
-      if (!partyReq.waitingTime) {
+      if (!partyReq.waitingTime && partyReq.source === PartySource.MANUAL) {
         throw new createError.BadRequest("Waiting time is required")
       }
     }

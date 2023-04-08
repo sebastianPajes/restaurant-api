@@ -19,9 +19,10 @@ export const handler: APIGatewayProxyHandler = async (event, context) => apiGate
     console.log("request:", JSON.stringify(event, undefined, 2));
 
     const locationReq = await validationWrapper(CreateLocationInDTO, event.body? JSON.parse(event.body) : {})
-
+    const waitlist_app_url = await getWaitlistAppUrl();
+    console.log(waitlist_app_url)
     // Generate the QR code URL
-    const qrCodeUrl = `${getWaitlistAppUrl()}?locationId=${locationReq.id}`
+    const qrCodeUrl = `${waitlist_app_url}/waitlist/${locationReq.id}`
 
     // Generate the QR code image
     const qrCodeImage = await QRCode.toDataURL(qrCodeUrl)
@@ -34,7 +35,9 @@ export const handler: APIGatewayProxyHandler = async (event, context) => apiGate
             name: locationReq.name,
             address: locationReq.address,
             businessHours: locationReq.businessHours,
-            qrCodeWaitlist: qrCodeImage
+            qrCodeWaitlist: qrCodeImage,
+            defaultWaitingTime: locationReq.defaultWaitingTime
+            
         }
     }
     
@@ -79,7 +82,7 @@ export const handler: APIGatewayProxyHandler = async (event, context) => apiGate
 
     const employeeRes = await EmployeeRepository.persist(employeeParam)
 
-    return { message: 'Success', data: {locationRes, newUserRes, employeeRes} }
+    return { message: 'Success', data: {locationRes, newUserRes, employeeRes, waitlist_app_url} }
   }
 })
 

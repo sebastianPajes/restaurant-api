@@ -1,5 +1,5 @@
 import { Expose, Type } from "class-transformer"
-import { IsBoolean, IsDefined, IsEnum, IsISO8601, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator"
+import { IsBoolean, IsDefined, IsEnum, IsISO8601, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, ValidateNested } from "class-validator"
 import { CommonEventValidator } from "./eventValidators/CommonEventValidators"
 
 export interface IPartyContract {
@@ -121,10 +121,12 @@ export class CustomerInDTO implements ICustomerContract {
     @Expose()
     @IsDefined()
     @IsString()
+    @IsNotEmpty()
     name: string
     @Expose()
     @IsDefined()
     @IsString()
+    @IsPhoneNumber('PE')
     phone: string
     @Expose()
     @IsDefined()
