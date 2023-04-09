@@ -24,7 +24,32 @@ export interface ILocationContract {
     businessHours: {
         [key in DayOfWeek]?: string;
     },
+    defaultWaitingTime: string,
+    phone?: string
+}
+
+export class UpdateLocationInDTO implements Omit<ILocationContract, 'qrCodeWaitlist'> {
+    @Expose()
+    @IsDefined()
+    @IsString()
+    name: string
+    @Expose()
+    @IsDefined()
+    @IsString()
+    address: string
+    @Expose()
+    @IsOptional()
+    businessHours: {
+        [key in DayOfWeek]?: string;
+    }
+    @Expose()
+    @IsDefined()
+    @IsString()
     defaultWaitingTime: string
+    @Expose()
+    @IsOptional()
+    @IsPhoneNumber('PE')
+    phone: string
 }
 
 export class CreateLocationInDTO implements Omit<ILocationContract, 'qrCodeWaitlist'> {
@@ -75,7 +100,10 @@ export interface ICreateLocationParams {
     primaryKeys: ILocationPrimaryKeyParams
     attr: ILocationContract
 }
-
+export interface IUpdateLocationParams {
+    primaryKeys: ILocationPrimaryKeyParams,
+    attr: Omit<ILocationContract, 'qrCodeWaitlist'>
+}
 export interface ILocationPrimaryKeyParams {
     id: string
 }

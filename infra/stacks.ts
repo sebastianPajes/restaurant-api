@@ -181,6 +181,24 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
+    const { lambdaFnAlias: updateLocation } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'update-location-handler',
+      handler: 'handlers/location/update-location.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        LOCATION_TABLE_NAME: locations.tableName,
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [locations.tableArn],
+        actions: ['dynamodb:UpdateItem', 'dynamodb:GetItem'],
+      })
+    })
+
     const { lambdaFnAlias: persistEmployee } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
@@ -624,6 +642,8 @@ export class RestaurantApiStack extends Stack {
     };
 
     locationResource.addMethod('GET', new apigw.LambdaIntegration(getLocationById), cognitoAuthorizer)
+
+    locationResource.addMethod('PUT', new apigw.LambdaIntegration(updateLocation), cognitoAuthorizer)
         
     employeesResource.addMethod('POST', new apigw.LambdaIntegration(persistEmployee), cognitoAuthorizer);
 

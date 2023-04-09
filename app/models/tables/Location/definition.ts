@@ -48,5 +48,8 @@ export const LocationSchemaDefinition: SchemaDefinition = {
     defaultWaitingTime: {
       type: String,
       required: true
+    },
+    phone: {
+      type: String,
     }
 };
