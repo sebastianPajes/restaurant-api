@@ -425,7 +425,7 @@ export class RestaurantApiStack extends Stack {
       role: new aws_iam.PolicyStatement({
         resources: [tables.tableArn],
         actions: [
-          'dynamodb:Query'
+          'dynamodb:Query','dynamodb:GetItem'
         ],
       })
     })
