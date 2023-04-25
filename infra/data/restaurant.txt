@@ -1,0 +1,142 @@
+#Nombre: Pescados Capitales
+Ubicación: Miraflores
+
+#Nombre: Pescados Capitales
+Tiempo de espera promedio Lunes:
+- mañana: no se sabe
+- tarde: 5 minutos
+- noche: 30 minutos
+
+#Nombre: Pescados Capitales
+Tiempo de espera promedio Martes:
+- mañana: no se sabe
+- tarde: 15 minutos
+- noche: 30 minutos
+
+#Nombre: Pescados Capitales
+Tiempo de espera promedio Miercoles:
+- mañana: no se sabe
+- tarde: 7 minutos
+- noche: 23 minutos
+
+#Nombre: Pescados Capitales
+Tiempo de espera promedio Jueves:
+- mañana: no se sabe
+- tarde: 4 minutos
+- noche: 8 minutos
+
+#Nombre: Pescados Capitales
+Tiempo de espera promedio Viernes:
+- mañana: no se sabe
+- tarde: 15 minutos
+- noche: 30 minutos
+
+#Nombre: Pescados Capitales
+Tiempo de espera promedio Sabado:
+- mañana: no se sabe
+- tarde: 45 minutos
+- noche: 30 minutos
+
+#Nombre: Pescados Capitales
+Tiempo de espera promedio Domingo:
+- mañana: no se sabe
+- tarde: 37 minutos
+- noche: 20 minutos
+
+#Nombre: Pescados Capitales
+Horario: Abierto de lunes a domingo de 12:00 pm a 10:00 pm
+#Nombre: Pescados Capitales
+Platos:
+Arroz con Mariscos (S/55)
+Ceviche Clásico (S/45)
+Jalea (S/50) 
+#Nombre: La Lucha Sanguchería Criolla
+Ubicación: Barranco
+#Nombre: La Lucha Sanguchería Criolla
+Horario: Abierto de lunes a domingo de 11:00 am a 10:00 pm
+#Nombre: La Lucha Sanguchería Criolla
+Platos:
+Sanguche de chicharrón (S/18)
+Sanguche de lomo saltado (S/22)
+Sanguche de pollo a la parrilla (S/20)
+#Nombre: La Mar Cebichería
+Ubicación: San Isidro
+#Nombre: La Mar Cebichería
+Horario: Abierto de martes a domingo de 12:00 pm a 9:00 pm
+#Nombre: La Mar Cebichería
+Platos:
+Cebiche Mixto (S/55)
+Chaufa de Mariscos (S/50)
+Arroz con Mariscos (S/65)
+#Nombre: Pardos Chicken
+Ubicación: San Miguel
+#Nombre: Pardos Chicken
+Horario: Abierto de lunes a domingo de 11:00 am a 9:00 pm
+#Nombre: Pardos Chicken
+Platos:
+Pollo a la brasa (S/32)
+Saltado de Pollo (S/29)
+Arroz con pollo (S/28)
+#Nombre: El Chinito
+Ubicación: Jesús María
+#Nombre: El Chinito
+Horario: Abierto de lunes a domingo de 10:00 am a 9:00 pm
+#Nombre: El Chinito
+Platos:
+Tallarines rojos (S/23)
+Arroz chaufa de pollo (S/25)
+Tallarines saltados con carne (S/23)
+#Nombre: El Pez On
+Ubicación: Barranco
+#Nombre: El Pez On
+Horario: Abierto de lunes a domingo de 12:00 pm a 10:00 pm
+#Nombre: El Pez On
+Platos:
+Cebiche (S/45)
+Pescado a lo macho (S/60)
+Parihuela (S/50)
+#Nombre: Maido
+Ubicación: Miraflores
+#Nombre: Maido
+Horario: Abierto de lunes a sábado de 12:30 pm a 3:00 pm y de 7:00 pm a 10:00 pm
+#Nombre: Maido
+Platos:
+Ceviche de langostinos (S/65)
+Tiradito de pulpo al olivo (S/68)
+Nikkei cuy (S/88)
+#Nombre: El Tío Mario
+Ubicación: Surco
+#Nombre: El Tío Mario
+Horario: Abierto de lunes a domingo de 12:00 pm a 9:00 pm
+#Nombre: El Tío Mario
+Platos:
+Chicharrón de cerdo (S/25)
+Ajiaco (S/30)
+Lomo saltado (S/35)
+#Nombre: Chifa Kuo Wha
+Ubicación: La Victoria
+#Nombre: Chifa Kuo Wha
+Horario: Abierto de lunes a domingo de 11:00 am a 9:00 pm
+#Nombre: Chifa Kuo Wha
+Platos:
+Arroz chaufa de mariscos (S/30)
+Tallarín saltado con carne (S/25)
+Lomo saltado (S/30)
+#Nombre: El Rocoto
+Ubicación: Surco
+#Nombre: El Rocoto
+Horario: Abierto de lunes a domingo de 11:00 am a 10:00 pm
+#Nombre: El Rocoto
+Platos:
+Ajiaco de camarones (S/34)
+Arroz con mariscos (S/45)
+Seco de cordero (S/38)
+#Nombre: Don Belisario
+Ubicación: Pueblo Libre
+#Nombre: Don Belisario
+Horario: Abierto de lunes a domingo de 11:00 am a 9:00 pm
+#Nombre: Don Belisario
+Platos:
+Ceviche de pescado (S/28)
+Arroz con mariscos (S/45)
+Carapulcra (S/24)

@@ -28,6 +28,9 @@ export const config = {
       },
     },
     deployedBy: validatedEnvs.DEPLOYED_BY,
+    chatbot: {
+      apiKey: process.env.OPEN_AI_KEY || ''
+    },
     aws:{
       ssm: {
         parameterPaths: {
