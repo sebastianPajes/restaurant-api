@@ -37,7 +37,7 @@ export class SharedFunctionLayer {
   constructor(scope: Construct, props: SharedFunctionLayerConstructProps){
     this.layer = new lambda.LayerVersion(scope, `${props.prefix}-shared-function-layer`, {
       code: lambda.Code.fromAsset(props.assetPath),
-      compatibleRuntimes: [lambda.Runtime.NODEJS_14_X],
+      compatibleRuntimes: [lambda.Runtime.NODEJS_18_X],
       description: 'Contains node module dependencies for lambda functions'
     })
   }
@@ -69,7 +69,7 @@ export class LambdaFunction {
         code: lambda.Code.fromAsset(props.sourceCodePath),
         layers: [props.layer],
         handler: props.handler,
-        runtime: lambda.Runtime.NODEJS_14_X,
+        runtime: lambda.Runtime.NODEJS_18_X,
         timeout: Duration.seconds(props.timeoutSecs),
         memorySize: props.memoryMB,
         reservedConcurrentExecutions: props.reservedConcurrentExecutions,

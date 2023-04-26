@@ -9,6 +9,7 @@ import {
   aws_iam,
   CfnOutput,
   aws_ssm,
+  aws_s3_deployment
 } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import { GetSystemParameterString } from './lib/constructs/ssm'
@@ -363,10 +364,64 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
-    //i got bit crazy because was not working...
+    const embeddingsBucket = new s3.Bucket(this, 'VectorDBBucket', {
+      versioned: false,
+    });
+
+    new aws_s3_deployment.BucketDeployment(this, 'DeployRestaurantFile', {
+      sources: [aws_s3_deployment.Source.asset('./data')],
+      destinationBucket: embeddingsBucket,
+      destinationKeyPrefix: '', // Opcional: si deseas agregar un prefijo al nombre del archivo
+    });
+
+    const vectorStoreKey = 'vector-store'
+
+    const { lambdaFnAlias: generateEmbeddings } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'generate-embeddings-handler',
+      handler: 'handlers/chatbot/generate-embeddings.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        BUCKET: embeddingsBucket.bucketName,
+        OPEN_AI_KEY: config.chatbot.apiKey,
+        BUCKET_KEY: vectorStoreKey
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [embeddingsBucket.bucketArn],
+        actions: ['s3:PutObject','s3:GetObject']
+      })
+    })
+
+    const { lambdaFnAlias: postChatbotMsg } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'post-chatbot-msg-handler',
+      handler: 'handlers/chatbot/post-chatbot-msg.handler',
+      timeoutSecs: 120,
+      memoryMB: 512,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        BUCKET: embeddingsBucket.bucketName,
+        OPEN_AI_KEY: config.chatbot.apiKey,
+        BUCKET_KEY: vectorStoreKey
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [embeddingsBucket.bucketArn],
+        actions: ['s3:PutObject','s3:GetObject']
+      })
+    })
+
     bucket.grantPublicAccess();
     bucket.grantPut(getSignedUrl);
     bucket.grantReadWrite(getSignedUrl);
+    embeddingsBucket.grantPublicAccess()
+    embeddingsBucket.grantPut(generateEmbeddings)
+    embeddingsBucket.grantReadWrite(generateEmbeddings)
+    embeddingsBucket.grantPut(postChatbotMsg)
+    embeddingsBucket.grantReadWrite(postChatbotMsg)
 
     const { lambdaFnAlias: createOrUpdateTable } = new LambdaFunction(this, {
       prefix: config.projectName,
@@ -597,9 +652,33 @@ export class RestaurantApiStack extends Stack {
       appId: amplifyWaitlistApp.attrAppId,
       branchName
     });
+
+    const amplifyChatbot = new CfnApp(this, 'chatbot', {
+      name: 'chatbot',
+      repository: 'https://github.com/sebastianPajes/restaurant-chatbot-openai',
+      oauthToken: gitToken,
+      environmentVariables: [
+        { name: 'API', value:  restaurantApi.url},
+        { name: 'API_KEY', value: waitlistApiKey }
+    ],
+    customRules: [
+      {
+        source: '</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|ttf|map|json)$)([^.]+$)/>',
+        target: '/index.html',
+        status: '200',
+      }
+    ]
+    });
+
+    new CfnBranch(this, 'chatbot-main-branch', {
+      appId: amplifyChatbot.attrAppId,
+      branchName
+    });
     
 
     const amplifyWaitlistAppUrl = `https://${branchName}.${amplifyWaitlistApp.attrAppId}.amplifyapp.com`;
+
+    const amplifyChatbotUrl = `https://${branchName}.${amplifyChatbot.attrAppId}.amplifyapp.com`;
 
     const baseResource = restaurantApi.root.addResource('api');
 
@@ -608,7 +687,17 @@ export class RestaurantApiStack extends Stack {
     const internalLocationResource = baseInternalResource.addResource('locations').addResource('{locationId}')
     const internalPartyResource = internalLocationResource.addResource('parties')
     const createResource = baseInternalResource.addResource('create');
+    const chatbotResource = baseInternalResource.addResource('chatbot')
 
+    const embeddingsResource = chatbotResource.addResource('embeddings')
+
+    chatbotResource.addMethod('POST', new apigw.LambdaIntegration(postChatbotMsg), {
+      apiKeyRequired: true
+    })
+
+    embeddingsResource.addMethod('POST', new apigw.LambdaIntegration(generateEmbeddings), {
+      apiKeyRequired: true
+    })
     
     createResource.addMethod('POST', new apigw.LambdaIntegration(createLocation), {
       apiKeyRequired: true
@@ -702,8 +791,13 @@ export class RestaurantApiStack extends Stack {
       description: 'Amplify waitlist url',
       value: amplifyWaitlistAppUrl,
       exportName: 'AmplifyWaitlistUrl',
-    });
+    }); 
 
+    new CfnOutput(this, 'AmplifyChatbotUrl', {
+      description: 'Amplify chatbot url',
+      value: amplifyChatbotUrl,
+      exportName: 'AmplifyChatbotUrl',
+    });
     new aws_ssm.StringParameter(this, 'WaitlistAppUrlParameter', {
       parameterName: '/admin/waitlist-app-url',
       stringValue: amplifyWaitlistAppUrl,
