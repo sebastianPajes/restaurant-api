@@ -25,6 +25,7 @@
   "author": "Sebastian Pajes",
   "license": "ISC",
   "dependencies": {
+    "aws-cdk": "^2.77.0",
     "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {

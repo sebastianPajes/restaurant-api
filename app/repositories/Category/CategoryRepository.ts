@@ -1,5 +1,6 @@
+import { formatDynamoKeys } from "../../lib/helpers/primaryKey";
 import {getCategoryKeys} from "../../lib/helpers/primaryKey"
-import { ICategory } from "../../models/Category";
+import { ICategory, ICategoryPrimaryKeyParams } from "../../models/Category";
 import { CategoryDBModel } from "../../models/tables/CategoryDBModel";
 
 export const CategoryRepository = {
@@ -13,4 +14,8 @@ export const CategoryRepository = {
         .eq(categoryKeys.pk)
         .exec();
     },
+    deleteById: async ({ locationId, id }: ICategoryPrimaryKeyParams) => {
+        const primaryKey = getCategoryKeys(locationId, id)
+        return await CategoryDBModel.delete(primaryKey)
+    }
 }
