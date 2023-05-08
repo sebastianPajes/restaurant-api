@@ -274,21 +274,21 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
-    const { lambdaFnAlias: createCategory } = new LambdaFunction(this, {
+    const { lambdaFnAlias: upsertCategory } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'create-category-handler',
-      handler: 'handlers/category/create-category.handler',
+      functionName: 'upsert-category-handler',
+      handler: 'handlers/category/upsert-category.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
       sourceCodePath: 'assets/dist',
       environment: {
-        CATEGORY_TABLE_NAME: categories.tableName
+        CATEGORY_TABLE_NAME: categories.tableName,
       },
       role: new aws_iam.PolicyStatement({
         resources: [categories.tableArn],
-        actions: ['dynamodb:PutItem']
+        actions: ['dynamodb:PutItem', 'dynamodb:GetItem', 'dynamodb:UpdateItem']
       })
     })
 
@@ -329,21 +329,22 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
-    const { lambdaFnAlias: createProduct } = new LambdaFunction(this, {
+
+    const { lambdaFnAlias: upsertProduct } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'create-product-handler',
-      handler: 'handlers/product/create-product.handler',
+      functionName: 'upsert-product-handler',
+      handler: 'handlers/product/upsert-product.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
       sourceCodePath: 'assets/dist',
       environment: {
-        PRODUCT_TABLE_NAME: products.tableName
+        PRODUCT_TABLE_NAME: products.tableName,
       },
       role: new aws_iam.PolicyStatement({
         resources: [products.tableArn],
-        actions: ['dynamodb:PutItem']
+        actions: ['dynamodb:PutItem', 'dynamodb:GetItem', 'dynamodb:UpdateItem']
       })
     })
 
@@ -782,13 +783,17 @@ export class RestaurantApiStack extends Stack {
 
     employeeResourceById.addMethod('DELETE', new apigw.LambdaIntegration(deleteEmployeeById), cognitoAuthorizer);
     
-    categoriesResource.addMethod('POST', new apigw.LambdaIntegration(createCategory), cognitoAuthorizer);
+    categoriesResource.addMethod('POST', new apigw.LambdaIntegration(upsertCategory), cognitoAuthorizer);
+    
+    categoriesResource.addMethod('PUT', new apigw.LambdaIntegration(upsertCategory), cognitoAuthorizer);
 
     const categoryIdResource = categoriesResource.addResource("{id}")
     
     categoryIdResource.addMethod('DELETE', new apigw.LambdaIntegration(deleteCategoryById), cognitoAuthorizer);
     
-    productsResource.addMethod('POST', new apigw.LambdaIntegration(createProduct), cognitoAuthorizer);
+    productsResource.addMethod('POST', new apigw.LambdaIntegration(upsertProduct), cognitoAuthorizer);
+    
+    productsResource.addMethod('PUT', new apigw.LambdaIntegration(upsertProduct), cognitoAuthorizer);
     
     const productIdResource = productsResource.addResource("{id}")
     
