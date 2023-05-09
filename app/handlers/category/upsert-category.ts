@@ -19,7 +19,7 @@ export const handler: APIGatewayProxyHandler = async (event, context) => apiGate
   const category: ICategory = {
     name: eventBody.name,
     description: eventBody.description,
-    isVisibleInMenu: true,
+    isVisibleInMenu: eventBody.isVisibleInMenu,
     assetKey: eventBody.assetKey
   };
 
