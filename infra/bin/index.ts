@@ -6,9 +6,9 @@ import { RestaurantApiStack } from '../stacks'
 (async () => {
   new RestaurantApiStack(
     new App(),
-    'Restaurant-API',
+    'Restaurant-API-despliegue',
     {
-      stackName: 'Restaurant-Api',
+      stackName: 'Restaurant-Api-despliegue',
       description: `Resources for Restaurant-Api Service`,
     }
   )
