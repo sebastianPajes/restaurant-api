@@ -9,7 +9,9 @@ import {
   aws_iam,
   CfnOutput,
   aws_ssm,
-  aws_s3_deployment
+  aws_s3_deployment,
+  aws_sns as sns,
+  aws_sns_subscriptions as subscriptions,
 } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import { GetSystemParameterString } from './lib/constructs/ssm'
@@ -401,7 +403,7 @@ export class RestaurantApiStack extends Stack {
       functionName: 'post-chatbot-msg-handler',
       handler: 'handlers/chatbot/post-chatbot-msg.handler',
       timeoutSecs: 120,
-      memoryMB: 512,
+      memoryMB: 1536,
       sourceCodePath: 'assets/dist',
       environment: {
         BUCKET: embeddingsBucket.bucketName,
@@ -485,6 +487,9 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
+    // Create an SNS topic
+    const smsTopic = new sns.Topic(this, 'SMSNotificationTopic');
+        
     const { lambdaFnAlias: upsertParty } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
@@ -496,13 +501,17 @@ export class RestaurantApiStack extends Stack {
       sourceCodePath: 'assets/dist',
       environment: {
         PARTY_TABLE_NAME: parties.tableName,
-        TABLES_TABLE_NAME: tables.tableName
+        TABLES_TABLE_NAME: tables.tableName,
+        LOCATION_TABLE_NAME:  locations.tableName,
       },
       role: new aws_iam.PolicyStatement({
-        resources: [parties.tableArn, tables.tableArn],
-        actions: ['dynamodb:PutItem', 'dynamodb:GetItem', 'dynamodb:UpdateItem']
+        resources: [parties.tableArn, locations.tableArn, tables.tableArn, '*'],
+        actions: ['dynamodb:PutItem', 'dynamodb:GetItem', 'dynamodb:UpdateItem', 'SNS:Publish', 'ssm:GetParameter']
       })
     })
+
+    smsTopic.grantPublish(upsertParty)
+    smsTopic.addSubscription(new subscriptions.LambdaSubscription(upsertParty));
 
     const { lambdaFnAlias: deleteParty } = new LambdaFunction(this, {
       prefix: config.projectName,
@@ -707,7 +716,17 @@ export class RestaurantApiStack extends Stack {
       apiKeyRequired: true
     })
 
-    internalPartyResource.addResource("{type}").addMethod('POST', new apigw.LambdaIntegration(upsertParty), {
+    const internalPartyTypeResource = internalPartyResource.addResource('{type}');
+
+    internalPartyTypeResource.addMethod('POST', new apigw.LambdaIntegration(upsertParty), {
+      apiKeyRequired: true
+    })
+
+    internalPartyTypeResource.addResource('{id}').addMethod('DELETE', new apigw.LambdaIntegration(deleteParty), {
+      apiKeyRequired: true
+    })
+
+    internalPartyTypeResource.addMethod('GET', new apigw.LambdaIntegration(listPartyByType), {
       apiKeyRequired: true
     })
     
@@ -802,6 +821,10 @@ export class RestaurantApiStack extends Stack {
       parameterName: '/admin/waitlist-app-url',
       stringValue: amplifyWaitlistAppUrl,
     });
+
+
+
+
 
   }
 }

@@ -32,6 +32,10 @@ export class PartyInDTO implements IPartyContract, Omit<IPartyPrimaryKeyParams, 
     @IsOptional()
     id: string
     @Expose()
+    @IsBoolean()
+    @IsOptional()
+    notify: boolean = false
+    @Expose()
     notes: string
     @Expose()
     @IsString()
