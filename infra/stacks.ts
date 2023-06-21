@@ -52,22 +52,22 @@ export class RestaurantApiStack extends Stack {
 
 
     // Define an S3 bucket
-    const bucket = new s3.Bucket(this, 'MyBucket', {
-      versioned: true, // Optional: enable versioning for the bucket
-      removalPolicy: RemovalPolicy.DESTROY,
-      cors: [
-        {
-          allowedMethods: [
-            s3.HttpMethods.GET,
-            s3.HttpMethods.POST,
-            s3.HttpMethods.PUT,
-            s3.HttpMethods.HEAD,
-          ],
-          allowedOrigins: ['*'],
-          allowedHeaders: ['*'],
-        },
-      ],
-    });
+    // const bucket = new s3.Bucket(this, 'MyBucket', {
+    //   versioned: true, // Optional: enable versioning for the bucket
+    //   removalPolicy: RemovalPolicy.DESTROY,
+    //   cors: [
+    //     {
+    //       allowedMethods: [
+    //         s3.HttpMethods.GET,
+    //         s3.HttpMethods.POST,
+    //         s3.HttpMethods.PUT,
+    //         s3.HttpMethods.HEAD,
+    //       ],
+    //       allowedOrigins: ['*'],
+    //       allowedHeaders: ['*'],
+    //     },
+    //   ],
+    // });
 
     // dynamoDB tables
     const { table: employees } = new DynamoDbTable(this, {
@@ -276,21 +276,21 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
-    const { lambdaFnAlias: createCategory } = new LambdaFunction(this, {
+    const { lambdaFnAlias: upsertCategory } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'create-category-handler',
-      handler: 'handlers/category/create-category.handler',
+      functionName: 'upsert-category-handler',
+      handler: 'handlers/category/upsert-category.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
       sourceCodePath: 'assets/dist',
       environment: {
-        CATEGORY_TABLE_NAME: categories.tableName
+        CATEGORY_TABLE_NAME: categories.tableName,
       },
       role: new aws_iam.PolicyStatement({
         resources: [categories.tableArn],
-        actions: ['dynamodb:PutItem']
+        actions: ['dynamodb:PutItem', 'dynamodb:GetItem', 'dynamodb:UpdateItem']
       })
     })
 
@@ -312,21 +312,41 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
-    const { lambdaFnAlias: createProduct } = new LambdaFunction(this, {
+
+    const { lambdaFnAlias: deleteCategoryById } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'create-product-handler',
-      handler: 'handlers/product/create-product.handler',
+      functionName: 'delete-category-handler',
+      handler: 'handlers/category/delete-category.handler',
       timeoutSecs: 30,
       memoryMB: 256,
       // reservedConcurrentExecutions: 10,
       sourceCodePath: 'assets/dist',
       environment: {
-        PRODUCT_TABLE_NAME: products.tableName
+        CATEGORY_TABLE_NAME: categories.tableName
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [categories.tableArn],
+        actions: ['dynamodb:DeleteItem'],
+      })
+    })
+
+
+    const { lambdaFnAlias: upsertProduct } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'upsert-product-handler',
+      handler: 'handlers/product/upsert-product.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        PRODUCT_TABLE_NAME: products.tableName,
       },
       role: new aws_iam.PolicyStatement({
         resources: [products.tableArn],
-        actions: ['dynamodb:PutItem']
+        actions: ['dynamodb:PutItem', 'dynamodb:GetItem', 'dynamodb:UpdateItem']
       })
     })
 
@@ -348,55 +368,75 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
-    const { lambdaFnAlias: getSignedUrl } = new LambdaFunction(this, {
+    
+    const { lambdaFnAlias: deleteProductById } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
-      functionName: 'get-signed-URL-handler',
-      handler: 'handlers/get-signed-URL.handler',
+      functionName: 'delete-product-handler',
+      handler: 'handlers/product/delete-product.handler',
       timeoutSecs: 30,
       memoryMB: 256,
-      environment: {
-        BUCKET: bucket.bucketName
-      },
       // reservedConcurrentExecutions: 10,
       sourceCodePath: 'assets/dist',
+      environment: {
+        PRODUCT_TABLE_NAME: products.tableName
+      },
       role: new aws_iam.PolicyStatement({
-        resources: [bucket.bucketArn],
-        actions: ['s3:PutObject','s3:GetObject']
+        resources: [products.tableArn],
+        actions: ['dynamodb:DeleteItem'],
       })
     })
 
-    const embeddingsBucket = new s3.Bucket(this, 'VectorDBBucket', {
-      versioned: false,
-    });
+    // const { lambdaFnAlias: getSignedUrl } = new LambdaFunction(this, {
+    //   prefix: config.projectName,
+    //   layer,
+    //   functionName: 'get-signed-URL-handler',
+    //   handler: 'handlers/get-signed-URL.handler',
+    //   timeoutSecs: 30,
+    //   memoryMB: 256,
+    //   environment: {
+    //     BUCKET: bucket.bucketName
+    //   },
+    //   // reservedConcurrentExecutions: 10,
+    //   sourceCodePath: 'assets/dist',
+    //   role: new aws_iam.PolicyStatement({
+    //     resources: [bucket.bucketArn],
+    //     actions: ['s3:PutObject','s3:GetObject']
+    //   })
+    // })
 
-    new aws_s3_deployment.BucketDeployment(this, 'DeployRestaurantFile', {
-      sources: [aws_s3_deployment.Source.asset('./data')],
-      destinationBucket: embeddingsBucket,
-      destinationKeyPrefix: '', // Opcional: si deseas agregar un prefijo al nombre del archivo
-    });
+    // const embeddingsBucket = new s3.Bucket(this, 'VectorDBBucket', {
+    //   versioned: false,
+    // });
+
+    // new aws_s3_deployment.BucketDeployment(this, 'DeployRestaurantFile', {
+    //   sources: [aws_s3_deployment.Source.asset('./data')],
+    //   destinationBucket: embeddingsBucket,
+    //   destinationKeyPrefix: '', // Opcional: si deseas agregar un prefijo al nombre del archivo
+    // });
 
     const vectorStoreKey = 'vector-store'
 
-    const { lambdaFnAlias: generateEmbeddings } = new LambdaFunction(this, {
-      prefix: config.projectName,
-      layer,
-      functionName: 'generate-embeddings-handler',
-      handler: 'handlers/chatbot/generate-embeddings.handler',
-      timeoutSecs: 30,
-      memoryMB: 256,
-      sourceCodePath: 'assets/dist',
-      environment: {
-        BUCKET: embeddingsBucket.bucketName,
-        OPEN_AI_KEY: config.chatbot.apiKey,
-        BUCKET_KEY: vectorStoreKey
-      },
-      role: new aws_iam.PolicyStatement({
-        resources: [embeddingsBucket.bucketArn],
-        actions: ['s3:PutObject','s3:GetObject']
-      })
-    })
+    // const { lambdaFnAlias: generateEmbeddings } = new LambdaFunction(this, {
+    //   prefix: config.projectName,
+    //   layer,
+    //   functionName: 'generate-embeddings-handler',
+    //   handler: 'handlers/chatbot/generate-embeddings.handler',
+    //   timeoutSecs: 30,
+    //   memoryMB: 256,
+    //   sourceCodePath: 'assets/dist',
+    //   environment: {
+    //     BUCKET: embeddingsBucket.bucketName,
+    //     OPEN_AI_KEY: config.chatbot.apiKey,
+    //     BUCKET_KEY: vectorStoreKey
+    //   },
+    //   role: new aws_iam.PolicyStatement({
+    //     resources: [embeddingsBucket.bucketArn],
+    //     actions: ['s3:PutObject','s3:GetObject']
+    //   })
+    // })
 
+<<<<<<< HEAD
     const { lambdaFnAlias: postChatbotMsg } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
@@ -415,15 +455,35 @@ export class RestaurantApiStack extends Stack {
         actions: ['s3:PutObject','s3:GetObject']
       })
     })
+=======
+    // const { lambdaFnAlias: postChatbotMsg } = new LambdaFunction(this, {
+    //   prefix: config.projectName,
+    //   layer,
+    //   functionName: 'post-chatbot-msg-handler',
+    //   handler: 'handlers/chatbot/post-chatbot-msg.handler',
+    //   timeoutSecs: 120,
+    //   memoryMB: 512,
+    //   sourceCodePath: 'assets/dist',
+    //   environment: {
+    //     BUCKET: embeddingsBucket.bucketName,
+    //     OPEN_AI_KEY: config.chatbot.apiKey,
+    //     BUCKET_KEY: vectorStoreKey
+    //   },
+    //   role: new aws_iam.PolicyStatement({
+    //     resources: [embeddingsBucket.bucketArn],
+    //     actions: ['s3:PutObject','s3:GetObject']
+    //   })
+    // })
+>>>>>>> 488689aba5be40685cdf8e1438ae6e10250ae413
 
-    bucket.grantPublicAccess();
-    bucket.grantPut(getSignedUrl);
-    bucket.grantReadWrite(getSignedUrl);
-    embeddingsBucket.grantPublicAccess()
-    embeddingsBucket.grantPut(generateEmbeddings)
-    embeddingsBucket.grantReadWrite(generateEmbeddings)
-    embeddingsBucket.grantPut(postChatbotMsg)
-    embeddingsBucket.grantReadWrite(postChatbotMsg)
+    // bucket.grantPublicAccess();
+    // bucket.grantPut(getSignedUrl);
+    // bucket.grantReadWrite(getSignedUrl);
+    // embeddingsBucket.grantPublicAccess()
+    // embeddingsBucket.grantPut(generateEmbeddings)
+    // embeddingsBucket.grantReadWrite(generateEmbeddings)
+    // embeddingsBucket.grantPut(postChatbotMsg)
+    // embeddingsBucket.grantReadWrite(postChatbotMsg)
 
     const { lambdaFnAlias: createOrUpdateTable } = new LambdaFunction(this, {
       prefix: config.projectName,
@@ -482,7 +542,7 @@ export class RestaurantApiStack extends Stack {
       role: new aws_iam.PolicyStatement({
         resources: [tables.tableArn],
         actions: [
-          'dynamodb:Query'
+          'dynamodb:Query','dynamodb:GetItem'
         ],
       })
     })
@@ -700,13 +760,13 @@ export class RestaurantApiStack extends Stack {
 
     const embeddingsResource = chatbotResource.addResource('embeddings')
 
-    chatbotResource.addMethod('POST', new apigw.LambdaIntegration(postChatbotMsg), {
-      apiKeyRequired: true
-    })
+    // chatbotResource.addMethod('POST', new apigw.LambdaIntegration(postChatbotMsg), {
+    //   apiKeyRequired: true
+    // })
 
-    embeddingsResource.addMethod('POST', new apigw.LambdaIntegration(generateEmbeddings), {
-      apiKeyRequired: true
-    })
+    // embeddingsResource.addMethod('POST', new apigw.LambdaIntegration(generateEmbeddings), {
+    //   apiKeyRequired: true
+    // })
     
     createResource.addMethod('POST', new apigw.LambdaIntegration(createLocation), {
       apiKeyRequired: true
@@ -762,10 +822,22 @@ export class RestaurantApiStack extends Stack {
     employeeResourceById.addMethod('GET', new apigw.LambdaIntegration(getEmployeeById), cognitoAuthorizer);
 
     employeeResourceById.addMethod('DELETE', new apigw.LambdaIntegration(deleteEmployeeById), cognitoAuthorizer);
-
-    categoriesResource.addMethod('POST', new apigw.LambdaIntegration(createCategory), cognitoAuthorizer);
     
-    productsResource.addMethod('POST', new apigw.LambdaIntegration(createProduct), cognitoAuthorizer);
+    categoriesResource.addMethod('POST', new apigw.LambdaIntegration(upsertCategory), cognitoAuthorizer);
+    
+    categoriesResource.addMethod('PUT', new apigw.LambdaIntegration(upsertCategory), cognitoAuthorizer);
+
+    const categoryIdResource = categoriesResource.addResource("{id}")
+    
+    categoryIdResource.addMethod('DELETE', new apigw.LambdaIntegration(deleteCategoryById), cognitoAuthorizer);
+    
+    productsResource.addMethod('POST', new apigw.LambdaIntegration(upsertProduct), cognitoAuthorizer);
+    
+    productsResource.addMethod('PUT', new apigw.LambdaIntegration(upsertProduct), cognitoAuthorizer);
+    
+    const productIdResource = productsResource.addResource("{id}")
+    
+    productIdResource.addMethod('DELETE', new apigw.LambdaIntegration(deleteProductById), cognitoAuthorizer);
 
     tablesResource.addMethod('POST', new apigw.LambdaIntegration(createOrUpdateTable), cognitoAuthorizer)
 
@@ -787,7 +859,7 @@ export class RestaurantApiStack extends Stack {
 
     productsResource.addMethod('GET', new apigw.LambdaIntegration(getProducts), cognitoAuthorizer);
 
-    uploadsResource.addResource("{fileName}").addMethod('GET', new apigw.LambdaIntegration(getSignedUrl), cognitoAuthorizer);
+    // uploadsResource.addResource("{fileName}").addMethod('GET', new apigw.LambdaIntegration(getSignedUrl), cognitoAuthorizer);
 
     partyTypeIdResource.addMethod('DELETE', new apigw.LambdaIntegration(deleteParty), cognitoAuthorizer)
 

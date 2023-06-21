@@ -5,3 +5,10 @@ export interface ICategory{
     isVisibleInMenu:boolean;
     assetKey?:string;
 }
+
+
+
+export interface ICategoryPrimaryKeyParams {
+    locationId: string,
+    id: string,
+}

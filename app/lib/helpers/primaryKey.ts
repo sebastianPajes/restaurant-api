@@ -27,20 +27,21 @@ export const getLocationPrimaryKeysV2 = (
 
 export const getCategoryKeys = (
   locationId: string,
+  id?:string
 ): { pk: string; sk: Uuid } => {
-  const categoryId = uuidv4();
+  const categoryId = id? id : uuidv4();
   return { ...getPartitionKey(locationId),sk:generateKey('categoryId',categoryId)} 
 }
 
 
 export const getProductKeys = (
   locationId: string,
-  categoryId?:string
+  categoryId?:string,
+  productId?:string
 ): { pk: Uuid; sk: string } => {
-  const productId = uuidv4();
   return {
       ...getPartitionKey(locationId),
-      sk: `${categoryId?generateKey('categoryId', categoryId)+'/':''}${generateKey('productId',productId)}`
+      sk: `${categoryId? generateKey('categoryId', categoryId)+'/':''}${generateKey('productId', productId || uuidv4())}`
     }
 }
 
