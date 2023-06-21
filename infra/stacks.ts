@@ -52,22 +52,22 @@ export class RestaurantApiStack extends Stack {
 
 
     // Define an S3 bucket
-    // const bucket = new s3.Bucket(this, 'MyBucket', {
-    //   versioned: true, // Optional: enable versioning for the bucket
-    //   removalPolicy: RemovalPolicy.DESTROY,
-    //   cors: [
-    //     {
-    //       allowedMethods: [
-    //         s3.HttpMethods.GET,
-    //         s3.HttpMethods.POST,
-    //         s3.HttpMethods.PUT,
-    //         s3.HttpMethods.HEAD,
-    //       ],
-    //       allowedOrigins: ['*'],
-    //       allowedHeaders: ['*'],
-    //     },
-    //   ],
-    // });
+    const bucket = new s3.Bucket(this, 'MyBucket', {
+      versioned: true, // Optional: enable versioning for the bucket
+      removalPolicy: RemovalPolicy.DESTROY,
+      cors: [
+        {
+          allowedMethods: [
+            s3.HttpMethods.GET,
+            s3.HttpMethods.POST,
+            s3.HttpMethods.PUT,
+            s3.HttpMethods.HEAD,
+          ],
+          allowedOrigins: ['*'],
+          allowedHeaders: ['*'],
+        },
+      ],
+    });
 
     // dynamoDB tables
     const { table: employees } = new DynamoDbTable(this, {
@@ -387,56 +387,55 @@ export class RestaurantApiStack extends Stack {
       })
     })
 
-    // const { lambdaFnAlias: getSignedUrl } = new LambdaFunction(this, {
-    //   prefix: config.projectName,
-    //   layer,
-    //   functionName: 'get-signed-URL-handler',
-    //   handler: 'handlers/get-signed-URL.handler',
-    //   timeoutSecs: 30,
-    //   memoryMB: 256,
-    //   environment: {
-    //     BUCKET: bucket.bucketName
-    //   },
-    //   // reservedConcurrentExecutions: 10,
-    //   sourceCodePath: 'assets/dist',
-    //   role: new aws_iam.PolicyStatement({
-    //     resources: [bucket.bucketArn],
-    //     actions: ['s3:PutObject','s3:GetObject']
-    //   })
-    // })
+    const { lambdaFnAlias: getSignedUrl } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'get-signed-URL-handler',
+      handler: 'handlers/get-signed-URL.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      environment: {
+        BUCKET: bucket.bucketName
+      },
+      // reservedConcurrentExecutions: 10,
+      sourceCodePath: 'assets/dist',
+      role: new aws_iam.PolicyStatement({
+        resources: [bucket.bucketArn],
+        actions: ['s3:PutObject','s3:GetObject']
+      })
+    })
 
-    // const embeddingsBucket = new s3.Bucket(this, 'VectorDBBucket', {
-    //   versioned: false,
-    // });
+    const embeddingsBucket = new s3.Bucket(this, 'VectorDBBucket', {
+      versioned: false,
+    });
 
-    // new aws_s3_deployment.BucketDeployment(this, 'DeployRestaurantFile', {
-    //   sources: [aws_s3_deployment.Source.asset('./data')],
-    //   destinationBucket: embeddingsBucket,
-    //   destinationKeyPrefix: '', // Opcional: si deseas agregar un prefijo al nombre del archivo
-    // });
+    new aws_s3_deployment.BucketDeployment(this, 'DeployRestaurantFile', {
+      sources: [aws_s3_deployment.Source.asset('./data')],
+      destinationBucket: embeddingsBucket,
+      destinationKeyPrefix: '', // Opcional: si deseas agregar un prefijo al nombre del archivo
+    });
 
     const vectorStoreKey = 'vector-store'
 
-    // const { lambdaFnAlias: generateEmbeddings } = new LambdaFunction(this, {
-    //   prefix: config.projectName,
-    //   layer,
-    //   functionName: 'generate-embeddings-handler',
-    //   handler: 'handlers/chatbot/generate-embeddings.handler',
-    //   timeoutSecs: 30,
-    //   memoryMB: 256,
-    //   sourceCodePath: 'assets/dist',
-    //   environment: {
-    //     BUCKET: embeddingsBucket.bucketName,
-    //     OPEN_AI_KEY: config.chatbot.apiKey,
-    //     BUCKET_KEY: vectorStoreKey
-    //   },
-    //   role: new aws_iam.PolicyStatement({
-    //     resources: [embeddingsBucket.bucketArn],
-    //     actions: ['s3:PutObject','s3:GetObject']
-    //   })
-    // })
+    const { lambdaFnAlias: generateEmbeddings } = new LambdaFunction(this, {
+      prefix: config.projectName,
+      layer,
+      functionName: 'generate-embeddings-handler',
+      handler: 'handlers/chatbot/generate-embeddings.handler',
+      timeoutSecs: 30,
+      memoryMB: 256,
+      sourceCodePath: 'assets/dist',
+      environment: {
+        BUCKET: embeddingsBucket.bucketName,
+        OPEN_AI_KEY: config.chatbot.apiKey,
+        BUCKET_KEY: vectorStoreKey
+      },
+      role: new aws_iam.PolicyStatement({
+        resources: [embeddingsBucket.bucketArn],
+        actions: ['s3:PutObject','s3:GetObject']
+      })
+    })
 
-<<<<<<< HEAD
     const { lambdaFnAlias: postChatbotMsg } = new LambdaFunction(this, {
       prefix: config.projectName,
       layer,
@@ -455,35 +454,15 @@ export class RestaurantApiStack extends Stack {
         actions: ['s3:PutObject','s3:GetObject']
       })
     })
-=======
-    // const { lambdaFnAlias: postChatbotMsg } = new LambdaFunction(this, {
-    //   prefix: config.projectName,
-    //   layer,
-    //   functionName: 'post-chatbot-msg-handler',
-    //   handler: 'handlers/chatbot/post-chatbot-msg.handler',
-    //   timeoutSecs: 120,
-    //   memoryMB: 512,
-    //   sourceCodePath: 'assets/dist',
-    //   environment: {
-    //     BUCKET: embeddingsBucket.bucketName,
-    //     OPEN_AI_KEY: config.chatbot.apiKey,
-    //     BUCKET_KEY: vectorStoreKey
-    //   },
-    //   role: new aws_iam.PolicyStatement({
-    //     resources: [embeddingsBucket.bucketArn],
-    //     actions: ['s3:PutObject','s3:GetObject']
-    //   })
-    // })
->>>>>>> 488689aba5be40685cdf8e1438ae6e10250ae413
 
-    // bucket.grantPublicAccess();
-    // bucket.grantPut(getSignedUrl);
-    // bucket.grantReadWrite(getSignedUrl);
-    // embeddingsBucket.grantPublicAccess()
-    // embeddingsBucket.grantPut(generateEmbeddings)
-    // embeddingsBucket.grantReadWrite(generateEmbeddings)
-    // embeddingsBucket.grantPut(postChatbotMsg)
-    // embeddingsBucket.grantReadWrite(postChatbotMsg)
+    bucket.grantPublicAccess();
+    bucket.grantPut(getSignedUrl);
+    bucket.grantReadWrite(getSignedUrl);
+    embeddingsBucket.grantPublicAccess()
+    embeddingsBucket.grantPut(generateEmbeddings)
+    embeddingsBucket.grantReadWrite(generateEmbeddings)
+    embeddingsBucket.grantPut(postChatbotMsg)
+    embeddingsBucket.grantReadWrite(postChatbotMsg)
 
     const { lambdaFnAlias: createOrUpdateTable } = new LambdaFunction(this, {
       prefix: config.projectName,
@@ -760,13 +739,13 @@ export class RestaurantApiStack extends Stack {
 
     const embeddingsResource = chatbotResource.addResource('embeddings')
 
-    // chatbotResource.addMethod('POST', new apigw.LambdaIntegration(postChatbotMsg), {
-    //   apiKeyRequired: true
-    // })
+    chatbotResource.addMethod('POST', new apigw.LambdaIntegration(postChatbotMsg), {
+      apiKeyRequired: true
+    })
 
-    // embeddingsResource.addMethod('POST', new apigw.LambdaIntegration(generateEmbeddings), {
-    //   apiKeyRequired: true
-    // })
+    embeddingsResource.addMethod('POST', new apigw.LambdaIntegration(generateEmbeddings), {
+      apiKeyRequired: true
+    })
     
     createResource.addMethod('POST', new apigw.LambdaIntegration(createLocation), {
       apiKeyRequired: true
@@ -859,7 +838,7 @@ export class RestaurantApiStack extends Stack {
 
     productsResource.addMethod('GET', new apigw.LambdaIntegration(getProducts), cognitoAuthorizer);
 
-    // uploadsResource.addResource("{fileName}").addMethod('GET', new apigw.LambdaIntegration(getSignedUrl), cognitoAuthorizer);
+    uploadsResource.addResource("{fileName}").addMethod('GET', new apigw.LambdaIntegration(getSignedUrl), cognitoAuthorizer);
 
     partyTypeIdResource.addMethod('DELETE', new apigw.LambdaIntegration(deleteParty), cognitoAuthorizer)
 
